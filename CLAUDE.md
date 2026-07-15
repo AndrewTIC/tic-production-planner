@@ -33,9 +33,13 @@ also a rehearsal for a larger ERP build, so prefer patterns that generalise
 5. Standard day: 07:30–16:00, break 12:00–13:00, 7.5 productive hours, Mon–Fri.
    Anything outside is overtime: 1.5x class Mon–Sat, 2x class Sunday. OT class on
    time entries is derived from timestamps, not user-entered.
-6. Time entries are never hard-edited or deleted. Corrections (Admin only) keep
-   original values in `original_values` jsonb and record who/when. Notes are
-   append-only; Admin can set `hidden`, never delete.
+6. Time entries are never hard-deleted. Admin delete is a soft-delete: `voided`
+   flag with who/when recorded, values retained, excluded from all totals and
+   screens except the Admin audit view (query `active_time_entries`, not the
+   table, everywhere else). Deleting in the UI requires a clear confirmation
+   warning. Corrections (Admin only) keep original values in `original_values`
+   jsonb and record who/when. Notes are append-only; Admin can set `hidden`,
+   never delete.
 7. `materials_complete` on builds is a manual flag set by Commercial. Material
    status is informational only — it must never block scheduling.
 
