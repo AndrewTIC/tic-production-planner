@@ -35,7 +35,8 @@ npm install
 npm run dev
 ```
 
-App: http://localhost:3000 — Supabase Studio (DB admin): http://localhost:54323
+App: http://localhost:3000 — Supabase Studio (DB admin): http://localhost:44323
+(local ports are 443xx, not the Supabase defaults — see supabase/config.toml)
 
 ## Day-to-day
 
