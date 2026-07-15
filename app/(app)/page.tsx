@@ -6,20 +6,20 @@ export default async function HomePage() {
   const supabase = await createClient();
   const [
     { count: customerCount },
+    { count: partCount },
     { count: statusCount },
-    { count: phaseCount },
     { count: workerCount },
   ] = await Promise.all([
     supabase.from("customers").select("*", { count: "exact", head: true }),
+    supabase.from("parts").select("*", { count: "exact", head: true }),
     supabase.from("build_statuses").select("*", { count: "exact", head: true }),
-    supabase.from("phases").select("*", { count: "exact", head: true }),
     supabase.from("workers").select("*", { count: "exact", head: true }),
   ]);
 
   const cards = [
     { label: "Customers", value: customerCount, href: "/customers" },
+    { label: "Parts", value: partCount, href: "/parts" },
     { label: "Build statuses", value: statusCount },
-    { label: "Phases", value: phaseCount },
     { label: "Workers", value: workerCount },
   ];
 

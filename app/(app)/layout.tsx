@@ -39,6 +39,12 @@ export default async function AppLayout({
             >
               Customers
             </Link>
+            <Link
+              href="/parts"
+              className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+            >
+              Parts
+            </Link>
           </nav>
           <div className="ml-auto flex items-center gap-3">
             <span className="text-sm text-zinc-600 dark:text-zinc-400">
