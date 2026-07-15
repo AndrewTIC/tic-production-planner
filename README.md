@@ -51,6 +51,19 @@ App: http://localhost:3000 — Supabase Studio (DB admin): http://localhost:4432
 **Rule: all schema changes are migration files committed to Git.** If
 `supabase db reset` doesn't reproduce your database, the change isn't real yet.
 
+## Local dev logins
+
+Seeded by `supabase db reset` — local development only. Password for all
+accounts: `planner-dev`. Public sign-up is disabled; users are admin-managed.
+
+| Email | Role |
+|---|---|
+| andrew@tic-direct.com | admin |
+| liam@tic-direct.com | admin |
+| sophie@tic-direct.com | commercial |
+| kiosk@tic-direct.com | workshop (shared shopfloor PC) |
+| richard@tic-direct.com | viewer |
+
 ## Design intent (short version)
 
 - Desktop-first for planning/admin screens; `/shopfloor/*` routes are

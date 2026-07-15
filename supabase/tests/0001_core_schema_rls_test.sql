@@ -17,11 +17,15 @@ values
   ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'kiosk@test.local'),
   ('00000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'viewer@test.local');
 
+-- The on_auth_user_created trigger (0002 migration) has already provisioned
+-- viewer profiles for the users above; set the roles under test.
 insert into public.profiles (id, display_name, role) values
   ('00000000-0000-0000-0000-000000000001', 'Test Admin',      'admin'),
   ('00000000-0000-0000-0000-000000000002', 'Test Commercial', 'commercial'),
   ('00000000-0000-0000-0000-000000000003', 'Workshop Kiosk',  'workshop'),
-  ('00000000-0000-0000-0000-000000000004', 'Test Viewer',     'viewer');
+  ('00000000-0000-0000-0000-000000000004', 'Test Viewer',     'viewer')
+on conflict (id) do update
+  set display_name = excluded.display_name, role = excluded.role;
 
 insert into public.customers (id, name)
 values ('10000000-0000-0000-0000-000000000001', 'Test Customer');
