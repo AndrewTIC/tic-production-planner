@@ -9,11 +9,13 @@ export default async function HomePage() {
     { count: customerCount },
     { count: projectCount },
     { count: partCount },
+    { count: workerCount },
   ] = await Promise.all([
     supabase.from("builds").select("*", { count: "exact", head: true }),
     supabase.from("customers").select("*", { count: "exact", head: true }),
     supabase.from("projects").select("*", { count: "exact", head: true }),
     supabase.from("parts").select("*", { count: "exact", head: true }),
+    supabase.from("workers").select("*", { count: "exact", head: true }),
   ]);
 
   const cards = [
@@ -21,6 +23,7 @@ export default async function HomePage() {
     { label: "Customers", value: customerCount, href: "/customers" },
     { label: "Projects", value: projectCount, href: "/projects" },
     { label: "Parts", value: partCount, href: "/parts" },
+    { label: "Workers", value: workerCount, href: "/workers" },
   ];
 
   return (
