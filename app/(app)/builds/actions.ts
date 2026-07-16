@@ -123,6 +123,85 @@ export async function updateBuild(id: string, formData: FormData) {
   redirect(`/builds/${id}?saved=1`);
 }
 
+// ── Phase operations (spec §6.2) ──────────────────────────────────
+// The units the scheduling board will assign. Mechanical and Electrical
+// run concurrently as a matter of course — no ordering is imposed here
+// (an optional depends_on exists in the schema for the rare genuine case;
+// UI for it comes with the board).
+
+const OPERATION_STATUSES = ["Pending", "In Progress", "Complete"];
+
+function parseHours(formData: FormData, key: string): number | null {
+  const value = Number(formData.get(key));
+  // numeric(6,2): sane planning range, quarter-hour steps enforced by the input.
+  if (!Number.isFinite(value) || value < 0 || value > 9999) return null;
+  return value;
+}
+
+export async function addOperation(buildId: string, formData: FormData) {
+  const phaseId = String(formData.get("phase_id") ?? "");
+  const description = optionalText(formData, "description");
+  const estimatedHours = parseHours(formData, "estimated_hours");
+
+  if (!phaseId) redirect(`/builds/${buildId}?error=op_phase`);
+  if (estimatedHours === null) redirect(`/builds/${buildId}?error=op_hours`);
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("operations").insert({
+    build_id: buildId,
+    phase_id: phaseId,
+    description,
+    estimated_hours: estimatedHours,
+  });
+
+  if (error) redirect(`/builds/${buildId}?error=op_save`);
+
+  revalidatePath(`/builds/${buildId}`);
+  revalidatePath("/builds");
+  redirect(`/builds/${buildId}`);
+}
+
+export async function updateOperation(
+  buildId: string,
+  operationId: string,
+  formData: FormData
+) {
+  const description = optionalText(formData, "description");
+  const estimatedHours = parseHours(formData, "estimated_hours");
+  const status = String(formData.get("status") ?? "Pending");
+
+  if (estimatedHours === null) redirect(`/builds/${buildId}?error=op_hours`);
+  if (!OPERATION_STATUSES.includes(status)) redirect(`/builds/${buildId}?error=op_save`);
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("operations")
+    .update({ description, estimated_hours: estimatedHours, status })
+    .eq("id", operationId);
+
+  if (error) redirect(`/builds/${buildId}?error=op_save`);
+
+  revalidatePath(`/builds/${buildId}`);
+  revalidatePath("/builds");
+  redirect(`/builds/${buildId}`);
+}
+
+// Fine while operations are planning data; once assignments or time
+// entries reference one, the FK refuses and the error message says so.
+export async function deleteOperation(buildId: string, operationId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("operations")
+    .delete()
+    .eq("id", operationId);
+
+  if (error) redirect(`/builds/${buildId}?error=op_delete`);
+
+  revalidatePath(`/builds/${buildId}`);
+  revalidatePath("/builds");
+  redirect(`/builds/${buildId}`);
+}
+
 // ── Material lines (spec §6.3) ────────────────────────────────────
 // Free-text component part numbers: bought-in components stay out of the
 // ESD parts register. Lines are a chase list, not an audit record, so a

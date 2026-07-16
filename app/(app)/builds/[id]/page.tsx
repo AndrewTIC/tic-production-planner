@@ -6,9 +6,12 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { materialBadge } from "@/lib/materials";
 import {
   addMaterialItem,
+  addOperation,
   deleteMaterialItem,
+  deleteOperation,
   setMaterialItemBookedIn,
   updateBuild,
+  updateOperation,
 } from "../actions";
 import { CustomerProjectSelect } from "../customer-project-select";
 import { MaterialBadgeChip } from "../material-badge";
@@ -25,7 +28,15 @@ const errorMessages: Record<string, string> = {
   save: "Could not save the build — try again.",
   component: "Component part number is required for a material line.",
   material_save: "Could not save the material line — try again.",
+  op_phase: "Choose a phase for the operation.",
+  op_hours: "Estimated hours must be a number between 0 and 9999.",
+  op_save: "Could not save the operation — try again.",
+  op_delete:
+    "Could not delete the operation — it may already have assignments or booked time.",
 };
+
+const OPERATION_STATUSES = ["Pending", "In Progress", "Complete"];
+const PHASE_ORDER: Record<string, number> = { MECH: 1, ELEC: 2, INSP: 3 };
 
 export default async function BuildPage({
   params,
@@ -41,23 +52,42 @@ export default async function BuildPage({
     auth !== null && ["admin", "commercial"].includes(auth.profile.role);
 
   const supabase = await createClient();
-  const [{ data: build }, { data: customers }, { data: projects }, { data: parts }, { data: statuses }] =
-    await Promise.all([
-      supabase
-        .from("builds")
-        .select("*, material_items(*)")
-        .eq("id", id)
-        .single(),
-      supabase.from("customers").select("id, name").order("name"),
-      supabase.from("projects").select("id, name, customer_id").order("name"),
-      supabase.from("parts").select("id, part_number, description").order("part_number"),
-      supabase.from("build_statuses").select("id, code, name").order("sequence"),
-    ]);
+  const [
+    { data: build },
+    { data: customers },
+    { data: projects },
+    { data: parts },
+    { data: statuses },
+    { data: phases },
+  ] = await Promise.all([
+    supabase
+      .from("builds")
+      .select("*, material_items(*), operations(*, phases(code, name))")
+      .eq("id", id)
+      .single(),
+    supabase.from("customers").select("id, name").order("name"),
+    supabase.from("projects").select("id, name, customer_id").order("name"),
+    supabase.from("parts").select("id, part_number, description").order("part_number"),
+    supabase.from("build_statuses").select("id, code, name").order("sequence"),
+    supabase.from("phases").select("id, code, name").order("code"),
+  ]);
 
   if (!build) notFound();
 
   const updateWithId = updateBuild.bind(null, build.id);
   const addMaterialWithId = addMaterialItem.bind(null, build.id);
+  const addOperationWithId = addOperation.bind(null, build.id);
+
+  const operations = (build.operations ?? []).sort(
+    (a, b) =>
+      (PHASE_ORDER[a.phases?.code ?? ""] ?? 9) -
+        (PHASE_ORDER[b.phases?.code ?? ""] ?? 9) ||
+      a.created_at.localeCompare(b.created_at)
+  );
+  const totalEstimated = operations.reduce(
+    (sum, op) => sum + Number(op.estimated_hours),
+    0
+  );
 
   const materials = (build.material_items ?? []).sort((a, b) =>
     (a.expected_delivery_date ?? "9999").localeCompare(
@@ -293,6 +323,212 @@ export default async function BuildPage({
           </div>
         )}
       </form>
+
+      {/* ── Phase operations (spec §6.2) ───────────────────────── */}
+      <section className="mt-10">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            Phase operations
+          </h2>
+          {operations.length > 0 && (
+            <span className="text-sm text-zinc-500 dark:text-zinc-400">
+              {totalEstimated.toFixed(2).replace(/\.?0+$/, "")} h estimated
+            </span>
+          )}
+        </div>
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          The units the scheduling board assigns to workers. Mechanical and
+          Electrical routinely run concurrently — no ordering is imposed.
+        </p>
+
+        {operations.length === 0 ? (
+          <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
+            No operations yet.
+            {canWrite && " Add one per phase with estimated hours."}
+          </p>
+        ) : (
+          <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
+            <table className="w-full min-w-[44rem] divide-y divide-zinc-200 text-left text-sm dark:divide-zinc-800">
+              <thead className="bg-zinc-50 dark:bg-zinc-900">
+                <tr>
+                  <th className="px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">
+                    Phase
+                  </th>
+                  <th className="px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">
+                    Description
+                  </th>
+                  <th className="px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">
+                    Est. hours
+                  </th>
+                  <th className="px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">
+                    Status
+                  </th>
+                  {canWrite && <th className="px-4 py-3" />}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-800 dark:bg-zinc-950">
+                {operations.map((op) => {
+                  const rowFormId = `op-${op.id}`;
+                  return (
+                    <tr key={op.id}>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                          {op.phases?.code ?? "—"}
+                        </span>
+                        {op.blocked && (
+                          <span
+                            className="ml-1.5 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-950 dark:text-red-300"
+                            title={op.blocked_reason ?? undefined}
+                          >
+                            Blocked
+                          </span>
+                        )}
+                      </td>
+                      {canWrite ? (
+                        <>
+                          <td className="px-4 py-2">
+                            {/* Carrier form — row inputs reference it via the
+                                form attribute (forms can't wrap table rows). */}
+                            <form
+                              id={rowFormId}
+                              action={updateOperation.bind(null, build.id, op.id)}
+                            />
+                            <input
+                              name="description"
+                              type="text"
+                              form={rowFormId}
+                              defaultValue={op.description ?? ""}
+                              className="w-full min-w-[12rem] rounded border border-zinc-300 bg-white px-2 py-1.5 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              name="estimated_hours"
+                              type="number"
+                              step="0.25"
+                              min="0"
+                              max="9999"
+                              required
+                              form={rowFormId}
+                              defaultValue={Number(op.estimated_hours)}
+                              className="w-24 rounded border border-zinc-300 bg-white px-2 py-1.5 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <select
+                              name="status"
+                              form={rowFormId}
+                              defaultValue={op.status}
+                              className="rounded border border-zinc-300 bg-white px-2 py-1.5 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                            >
+                              {OPERATION_STATUSES.map((s) => (
+                                <option key={s}>{s}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-2 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                type="submit"
+                                form={rowFormId}
+                                className="rounded border border-zinc-300 px-2 py-1 text-xs text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                              >
+                                Update
+                              </button>
+                              <form action={deleteOperation.bind(null, build.id, op.id)}>
+                                <button
+                                  type="submit"
+                                  className="rounded border border-red-200 px-2 py-1 text-xs text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+                                >
+                                  Delete
+                                </button>
+                              </form>
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-4 py-3 text-zinc-500 dark:text-zinc-400">
+                            {op.description ?? ""}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-zinc-700 dark:text-zinc-300">
+                            {Number(op.estimated_hours)}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-zinc-500 dark:text-zinc-400">
+                            {op.status}
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {canWrite && (
+          <form
+            action={addOperationWithId}
+            className="mt-4 grid grid-cols-1 items-end gap-3 sm:grid-cols-[auto_1fr_auto_auto]"
+          >
+            <div>
+              <label htmlFor="phase_id" className={labelClasses}>
+                Phase <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="phase_id"
+                name="phase_id"
+                required
+                defaultValue=""
+                className={inputClasses}
+              >
+                <option value="" disabled>
+                  Select…
+                </option>
+                {(phases ?? []).map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="op_description" className={labelClasses}>
+                Description
+              </label>
+              <input
+                id="op_description"
+                name="description"
+                type="text"
+                autoComplete="off"
+                className={inputClasses}
+              />
+            </div>
+            <div>
+              <label htmlFor="op_estimated_hours" className={labelClasses}>
+                Est. hours <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="op_estimated_hours"
+                name="estimated_hours"
+                type="number"
+                step="0.25"
+                min="0"
+                max="9999"
+                required
+                className={inputClasses}
+              />
+            </div>
+            <button
+              type="submit"
+              className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              Add operation
+            </button>
+          </form>
+        )}
+      </section>
 
       {/* ── Material lines (spec §6.3) ─────────────────────────── */}
       <section className="mt-10">

@@ -24,7 +24,8 @@ export default async function BuildsPage() {
       `id, bu_number, priority, materials_complete, requested_delivery_date,
        parts(part_number), customers(name), projects(name),
        build_statuses(name, sequence),
-       material_items(booked_in, expected_delivery_date)`
+       material_items(booked_in, expected_delivery_date),
+       operations(estimated_hours)`
     )
     .order("created_at", { ascending: false });
 
@@ -81,6 +82,9 @@ export default async function BuildsPage() {
                   Materials
                 </th>
                 <th className="px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">
+                  Est. hrs
+                </th>
+                <th className="px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">
                   Req. delivery
                 </th>
               </tr>
@@ -123,6 +127,14 @@ export default async function BuildsPage() {
                     <MaterialBadgeChip
                       badge={materialBadge(b.materials_complete, b.material_items)}
                     />
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-zinc-700 dark:text-zinc-300">
+                    {b.operations.length === 0
+                      ? "—"
+                      : b.operations
+                          .reduce((sum, op) => sum + Number(op.estimated_hours), 0)
+                          .toFixed(2)
+                          .replace(/\.?0+$/, "")}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-zinc-500 dark:text-zinc-400">
                     {formatDate(b.requested_delivery_date)}
