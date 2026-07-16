@@ -6,20 +6,20 @@ export default async function HomePage() {
   const supabase = await createClient();
   const [
     { count: customerCount },
+    { count: projectCount },
     { count: partCount },
-    { count: statusCount },
     { count: workerCount },
   ] = await Promise.all([
     supabase.from("customers").select("*", { count: "exact", head: true }),
+    supabase.from("projects").select("*", { count: "exact", head: true }),
     supabase.from("parts").select("*", { count: "exact", head: true }),
-    supabase.from("build_statuses").select("*", { count: "exact", head: true }),
     supabase.from("workers").select("*", { count: "exact", head: true }),
   ]);
 
   const cards = [
     { label: "Customers", value: customerCount, href: "/customers" },
+    { label: "Projects", value: projectCount, href: "/projects" },
     { label: "Parts", value: partCount, href: "/parts" },
-    { label: "Build statuses", value: statusCount },
     { label: "Workers", value: workerCount },
   ];
 
@@ -50,7 +50,7 @@ export default async function HomePage() {
       </section>
 
       <p className="mt-8 text-sm text-zinc-500 dark:text-zinc-400">
-        Phase 1 in progress — projects, parts, and builds screens arrive next.
+        Phase 1 in progress — the builds register arrives next.
       </p>
     </main>
   );
