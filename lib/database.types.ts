@@ -292,6 +292,7 @@ export type Database = {
           date_to: string
           id: string
           note: string | null
+          part_of_day: string
           updated_at: string
           worker_id: string | null
         }
@@ -301,6 +302,7 @@ export type Database = {
           date_to: string
           id?: string
           note?: string | null
+          part_of_day?: string
           updated_at?: string
           worker_id?: string | null
         }
@@ -310,6 +312,7 @@ export type Database = {
           date_to?: string
           id?: string
           note?: string | null
+          part_of_day?: string
           updated_at?: string
           worker_id?: string | null
         }
