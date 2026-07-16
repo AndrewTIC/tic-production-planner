@@ -64,6 +64,32 @@ accounts: `planner-dev`. Public sign-up is disabled; users are admin-managed.
 | kiosk@tic-direct.com | workshop (shared shopfloor PC) |
 | richard@tic-direct.com | viewer |
 
+The seed also creates six workers (competencies included) and a small
+sample dataset — one customer/project, two parts, and builds BU12001 and
+BU12002 with phase operations and an outstanding material line — so a
+fresh reset gives you something to click through immediately.
+
+## Progress (build plan, spec §9)
+
+- **Phase 0 — dev environment: done.** Repo, migrations-in-Git workflow,
+  seed, `.env.example`, local Supabase on 443xx ports.
+- **Phase 1 — foundations: done.** Auth with the four roles (RLS proven
+  by pgTAP tests); CRUD registers for customers, projects, parts, and
+  builds with order metadata, OrderWise refs, statuses, and material
+  readiness (manual flag + outstanding lines, informational only).
+- **Phase 2 — capacity and schedule: in progress.** Workers with phase
+  competencies and user links, holiday calendar (full and half days —
+  AM/PM on a single date), and phase operations on builds with estimated
+  hours. Next: the scheduling board (workers × days, drag-and-drop
+  assignments, overtime, conflict flags) and the load view.
+- Phases 3–5 (shopfloor clocking, documents/notes, reporting, server
+  deployment) not started.
+
+Domain rules that trip people up: time entries can never be hard-deleted
+(admin delete = audited soft-delete via `voided`; query
+`active_time_entries`, not the table); material status never blocks
+scheduling; OT class is derived from timestamps, never entered.
+
 ## Design intent (short version)
 
 - Desktop-first for planning/admin screens; `/shopfloor/*` routes are
@@ -71,6 +97,11 @@ accounts: `planner-dev`. Public sign-up is disabled; users are admin-managed.
 - Hours only, never money. Overtime is classified (1.5x Mon–Sat, 2x Sun),
   rates are applied outside this system.
 - Roles: admin (Andrew, Liam), commercial (Sophie), workshop, viewer.
+  Role gating in the UI is presentational; RLS is the enforcement.
+- Reference data (statuses, phases) lives in tables, never in code.
+- Registers deactivate, never delete (customers, workers); half-day
+  holidays are single-date rows (AM = 4.5h, PM = 3h against the
+  standard day).
 
 ## Deployment
 
