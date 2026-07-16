@@ -60,8 +60,11 @@ $$;
 -- ── Viewer: read yes, write no ────────────────────────────────────
 select test_login('00000000-0000-0000-0000-000000000004');
 
+-- Count only the fixture build — seed data adds builds of its own.
 select results_eq(
-  $$ select count(*) from builds $$, array[1::bigint],
+  $$ select count(*) from builds
+     where id = '10000000-0000-0000-0000-000000000003' $$,
+  array[1::bigint],
   'viewer can read builds');
 
 select throws_ok(

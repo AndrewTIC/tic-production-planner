@@ -96,3 +96,75 @@ where w.id between 'b0000000-0000-0000-0000-000000000001'
   and (p.code in ('MECH','ELEC')
        or (p.code = 'INSP' and w.name in ('Andrew','Liam')))
 on conflict do nothing;
+
+-- ── Sample dev data (LOCAL ONLY) ──────────────────────────────────
+-- A small deterministic dataset so `supabase db reset` yields a system
+-- worth opening: registers populated, builds with operations, and an
+-- outstanding material line. Production carries data over by pg_dump
+-- restore, never by seed. Deterministic ids: c1=customers, c2=projects,
+-- c3=parts, c4=builds, c5=operations, c6=material_items.
+insert into customers (id, name, notes) values
+  ('c1000000-0000-0000-0000-000000000001', 'Northern Water Systems',
+   'Main contact: J. Barker. Orders usually via the Leeds office.')
+on conflict (id) do nothing;
+
+insert into projects (id, customer_id, name, notes) values
+  ('c2000000-0000-0000-0000-000000000001',
+   'c1000000-0000-0000-0000-000000000001',
+   'Leeds STW Upgrade 2026',
+   'Framework order — panels called off in batches through 2026.')
+on conflict (id) do nothing;
+
+insert into parts (id, part_number, description) values
+  ('c3000000-0000-0000-0000-000000000001', 'ESD-CP-0451',
+   'Pump station control panel, 3-phase, IP65 enclosure'),
+  ('c3000000-0000-0000-0000-000000000002', 'ESD-CP-0463',
+   'Dosing rig control panel, single phase')
+on conflict (id) do nothing;
+
+insert into builds
+  (id, bu_number, part_id, customer_id, project_id, order_number,
+   order_received_date, requested_delivery_date,
+   ow_sales_order_ref, ow_esd_sales_order_ref, status_id, priority)
+values
+  ('c4000000-0000-0000-0000-000000000001', 'BU12001',
+   'c3000000-0000-0000-0000-000000000001',
+   'c1000000-0000-0000-0000-000000000001',
+   'c2000000-0000-0000-0000-000000000001',
+   'PO-88412', '2026-07-10', '2026-09-18', 'SO-104882', 'SO-104890',
+   (select id from build_statuses where code = 'ORDER'), 'High'),
+  ('c4000000-0000-0000-0000-000000000002', 'BU12002',
+   'c3000000-0000-0000-0000-000000000002',
+   'c1000000-0000-0000-0000-000000000001',
+   null,
+   'PO-88551', '2026-07-14', '2026-08-28', 'SO-104901', 'SO-104907',
+   (select id from build_statuses where code = 'PART_PICKED'), 'Normal')
+on conflict (id) do nothing;
+
+-- Concurrent Mechanical + Electrical on BU12001 — the normal case (spec §6.2).
+insert into operations (id, build_id, phase_id, description, estimated_hours) values
+  ('c5000000-0000-0000-0000-000000000001',
+   'c4000000-0000-0000-0000-000000000001',
+   (select id from phases where code = 'MECH'),
+   'Backplate and enclosure fit-out', 24),
+  ('c5000000-0000-0000-0000-000000000002',
+   'c4000000-0000-0000-0000-000000000001',
+   (select id from phases where code = 'ELEC'),
+   'Wiring and terminations', 32),
+  ('c5000000-0000-0000-0000-000000000003',
+   'c4000000-0000-0000-0000-000000000002',
+   (select id from phases where code = 'MECH'),
+   'Baseplate assembly', 8),
+  ('c5000000-0000-0000-0000-000000000004',
+   'c4000000-0000-0000-0000-000000000002',
+   (select id from phases where code = 'INSP'),
+   'Final inspection and test', 2)
+on conflict (id) do nothing;
+
+insert into material_items
+  (id, build_id, component_part_number, description, expected_delivery_date)
+values
+  ('c6000000-0000-0000-0000-000000000001',
+   'c4000000-0000-0000-0000-000000000001',
+   'RITTAL-AX-1180', 'IP65 enclosure 800x1000x300', '2026-08-07')
+on conflict (id) do nothing;
