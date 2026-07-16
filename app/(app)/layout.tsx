@@ -34,6 +34,12 @@ export default async function AppLayout({
           </Link>
           <nav className="flex items-center gap-4 text-sm">
             <Link
+              href="/builds"
+              className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+            >
+              Builds
+            </Link>
+            <Link
               href="/customers"
               className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
             >
