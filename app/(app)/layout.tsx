@@ -1,7 +1,9 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getUserProfile } from "@/lib/auth";
 import { logout } from "@/app/login/actions";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const roleStyles: Record<string, string> = {
   admin: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300",
@@ -25,14 +27,30 @@ export default async function AppLayout({
   return (
     <div className="min-h-screen">
       <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3">
-          <Link
-            href="/"
-            className="text-base font-semibold text-zinc-900 dark:text-zinc-50"
-          >
-            ESD Planner
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 md:px-6">
+          <Link href="/" className="flex items-center gap-3">
+            {/* Design spec §12/Logo Usage: 32px tall, far left, the only
+                full-colour logo in the interface. Never recoloured or
+                placed on lime/grey. */}
+            <Image
+              src="/TIC-logo.png"
+              alt="TIC"
+              width={34}
+              height={32}
+              className="h-8 w-auto"
+              priority
+            />
+            <span className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+              ESD Planner
+            </span>
           </Link>
           <nav className="flex items-center gap-4 text-sm">
+            <Link
+              href="/production"
+              className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+            >
+              Production
+            </Link>
             <Link
               href="/builds"
               className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
@@ -71,6 +89,7 @@ export default async function AppLayout({
             </Link>
           </nav>
           <div className="ml-auto flex items-center gap-3">
+            <ThemeToggle />
             <span className="text-sm text-zinc-600 dark:text-zinc-400">
               {profile.display_name}
             </span>
@@ -92,7 +111,9 @@ export default async function AppLayout({
           </div>
         </div>
       </header>
-      <div className="mx-auto max-w-6xl px-6 py-8">{children}</div>
+      {/* Full-bleed: the production board wants every pixel (Andrew, 17 Jul);
+          narrower pages set their own max-width. */}
+      <div className="px-4 py-6 md:px-6 md:py-8">{children}</div>
     </div>
   );
 }
