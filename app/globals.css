@@ -1,26 +1,101 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Dark mode is class-based, not OS-based: the header toggle sets `.dark` on
+   <html> (persisted in localStorage). Existing `dark:` utilities respond to
+   the class. Decision: Andrew, 17 Jul 2026 — light/dark toggle ships in v1,
+   superseding design spec §37's light-only rule. */
+@custom-variant dark (&:where(.dark, .dark *));
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* ── TIC design tokens (docs/design-spec-v1.2.md §4–§9) ─────────────
+   Light mode is the only theme in v1 (spec §37). Components use these via
+   Tailwind utilities (bg-lime-500, text-neutral-800, rounded-card …) or the
+   semantic aliases; raw hex in component code is a bug. Phase A defines the
+   tokens; Phase B swaps screens onto them (see docs/ui-migration-plan.md). */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@theme {
+  /* Brand — extracted from the TIC logo. NEVER white text on lime-500. */
+  --color-lime-100: #f4f8dc;
+  --color-lime-500: #b0cb1f;
+  --color-lime-600: #9db61c;
+  --color-lime-700: #7a8f14;
+  --color-lime-800: #66780f;
+  --color-tic-grey: #898989;
+
+  /* Neutrals */
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f6f7f8;
+  --color-neutral-100: #edeff1;
+  --color-neutral-200: #dfe3e6;
+  --color-neutral-500: #6b7480;
+  --color-neutral-800: #24292e;
+
+  /* Status pairs (§4 canonical table) — foreground / tinted background.
+     Mapped onto OUR reference-data statuses per docs/ui-migration-plan.md §1. */
+  --color-status-progress: #1d6fd1;
+  --color-status-progress-bg: #e7f0fc;
+  --color-status-complete: #66780f;
+  --color-status-complete-bg: #f4f8dc;
+  --color-status-attention: #b26a00;
+  --color-status-attention-bg: #fcf1e0;
+  --color-status-blocked: #c4302b;
+  --color-status-blocked-bg: #fbe9e8;
+  --color-status-review: #6d4fc2;
+  --color-status-review-bg: #efeafb;
+
+  /* Semantic aliases (§4) — the indirection that makes future theming a
+     token swap. Prefer these in components where a semantic name exists. */
+  --color-action: var(--color-lime-500);
+  --color-action-hover: var(--color-lime-600);
+  --color-action-text: var(--color-neutral-800);
+  --color-link: var(--color-lime-800);
+  --color-focus: var(--color-lime-800);
+  --color-surface: var(--color-neutral-0);
+  --color-canvas: var(--color-neutral-50);
+  --color-border: var(--color-neutral-200);
+  --color-text: var(--color-neutral-800);
+  --color-text-secondary: var(--color-neutral-500);
+
+  /* Radii (§7) */
+  --radius-button: 12px;
+  --radius-job: 14px;
+  --radius-card: 16px;
+  --radius-container: 20px;
+  --radius-dialog: 24px;
+
+  /* Shadows (§8) — three elevations only */
+  --shadow-1: 0 1px 2px rgba(16, 24, 32, 0.05), 0 1px 3px rgba(16, 24, 32, 0.06);
+  --shadow-2: 0 4px 12px rgba(16, 24, 32, 0.1);
+  --shadow-3: 0 12px 32px rgba(16, 24, 32, 0.16);
+
+  /* Motion (§29) */
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 250ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Typography (§5) — Inter loaded via next/font in app/layout.tsx */
+  --font-sans: var(--font-inter), "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
+
+/* Dark theme: semantic tokens swap; component utilities keep their dark:
+   variants until Phase B finishes the token migration. */
+.dark {
+  --color-canvas: #101214;
+  --color-surface: #17191c;
+  --color-border: #2c3136;
+  --color-text: #e7e9eb;
+  --color-text-secondary: #9aa1a9;
+}
+
+/* Tabular figures wherever numbers column-align (§5). */
+table,
+.tabular {
+  font-variant-numeric: tabular-nums;
 }
