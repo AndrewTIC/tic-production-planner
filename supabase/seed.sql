@@ -85,8 +85,8 @@ insert into workers (id, name, user_id) values
   ('b0000000-0000-0000-0000-000000000006', 'Lewis Cuthbert', null)
 on conflict (id) do nothing;
 
--- Dev-guess competencies — Commercial maintains the real ones in the UI.
--- Everyone gets Mechanical + Electrical; the managers also get Inspection.
+-- Competencies (confirmed by Andrew, 17 Jul 2026): everyone does Mechanical
+-- and Electrical; everyone except Dave can also inspect.
 insert into worker_phases (worker_id, phase_id)
 select w.id, p.id
 from workers w
@@ -94,7 +94,8 @@ cross join phases p
 where w.id between 'b0000000-0000-0000-0000-000000000001'
                and 'b0000000-0000-0000-0000-000000000006'
   and (p.code in ('MECH','ELEC')
-       or (p.code = 'INSP' and w.name in ('Andrew','Liam')))
+       or (p.code = 'INSP'
+           and w.name in ('Andrew','Liam','Sophie Clark','Kai Truscott','Lewis Cuthbert')))
 on conflict do nothing;
 
 -- ── Sample dev data (LOCAL ONLY) ──────────────────────────────────
@@ -167,4 +168,27 @@ values
   ('c6000000-0000-0000-0000-000000000001',
    'c4000000-0000-0000-0000-000000000001',
    'RITTAL-AX-1180', 'IP65 enclosure 800x1000x300', '2026-08-07')
+on conflict (id) do nothing;
+
+-- Holidays: one fixed closure plus a relative-date half day so the board
+-- always has something to shade this week regardless of when it's reset.
+insert into holidays (id, worker_id, date_from, date_to, part_of_day, note) values
+  ('c7000000-0000-0000-0000-000000000001', null,
+   '2026-12-24', '2027-01-01', 'full', 'Christmas shutdown'),
+  ('c7000000-0000-0000-0000-000000000002',
+   'b0000000-0000-0000-0000-000000000004',  -- Kai
+   current_date + 2, current_date + 2, 'pm', 'Dentist (sample)')
+on conflict (id) do nothing;
+
+-- Sample assignments (relative dates) so the board renders cell chips and
+-- the backlog shows partially-assigned operations immediately after reset.
+insert into assignments (id, operation_id, worker_id, date, planned_hours, overtime) values
+  ('c8000000-0000-0000-0000-000000000001',
+   'c5000000-0000-0000-0000-000000000001',  -- BU12001 MECH
+   'b0000000-0000-0000-0000-000000000004',  -- Kai
+   current_date + 1, 7.5, false),
+  ('c8000000-0000-0000-0000-000000000002',
+   'c5000000-0000-0000-0000-000000000002',  -- BU12001 ELEC
+   'b0000000-0000-0000-0000-000000000006',  -- Lewis
+   current_date + 1, 4, false)
 on conflict (id) do nothing;
