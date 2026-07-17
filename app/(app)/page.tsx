@@ -53,8 +53,8 @@ export default async function HomePage() {
       </section>
 
       <p className="mt-8 text-sm text-zinc-500 dark:text-zinc-400">
-        Phase 1 registers complete — workers, calendars, and the scheduling
-        board (Phase 2) come next.
+        Phase 2 in progress — the schedule shows the week&apos;s board;
+        assignment editing, conflict flags, and the load view come next.
       </p>
     </main>
   );
