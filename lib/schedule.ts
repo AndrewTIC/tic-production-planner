@@ -27,8 +27,20 @@ export function mondayOf(dateStr: string): string {
   return addDays(dateStr, -sinceMonday);
 }
 
+// Board columns from a Monday. 7 = a week, 14 = a fortnight (design spec
+// §15 zoom levels); the board always starts on a Monday so the week
+// boundaries stay legible however many days are shown.
+export function boardDates(monday: string, days: number): string[] {
+  return Array.from({ length: days }, (_, i) => addDays(monday, i));
+}
+
 export function weekDates(monday: string): string[] {
-  return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  return boardDates(monday, 7);
+}
+
+// Monday-morning column: where the fortnight view draws its week divider.
+export function isWeekStart(dateStr: string): boolean {
+  return new Date(`${dateStr}T00:00:00Z`).getUTCDay() === 1;
 }
 
 // Saturday/Sunday: any work on these days is overtime (spec §6.4).
