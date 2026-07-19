@@ -797,6 +797,10 @@ export type Database = {
     }
     Functions: {
       app_role: { Args: never; Returns: string }
+      auto_close_open_time_entries: {
+        Args: { before_ts?: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
