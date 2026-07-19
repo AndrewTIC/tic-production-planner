@@ -601,6 +601,7 @@ export function AssignmentBar({
   workerName,
   canWrite,
   compact = false,
+  conflicts,
 }: {
   assignment: AssignmentRow;
   op: OperationInfo;
@@ -610,8 +611,12 @@ export function AssignmentBar({
   // colour-coded initials badge and hours only — the name lives in the
   // tooltip. The key explains that worker colours are consistent.
   compact?: boolean;
+  // Slice 3: reasons this assignment needs a scheduler's eye (holiday
+  // clash, competency, overload, past delivery). Flags, never blocks.
+  conflicts?: string[];
 }) {
   const { openEdit } = useScheduling();
+  const hasConflict = !!conflicts && conflicts.length > 0;
   const classes = `mb-1 flex w-full items-center gap-1.5 rounded-md border border-l-4 py-1 text-left text-xs text-zinc-800 shadow-(--shadow-1) dark:text-zinc-200 ${
     compact ? "px-1" : "px-1.5"
   } ${phaseBar[op.phase] ?? "border-l-zinc-400 bg-white dark:bg-zinc-900"} ${
@@ -622,10 +627,20 @@ export function AssignmentBar({
 
   const label = `${workerName} — ${formatHours(assignment.planned_hours)}h${
     assignment.overtime ? " overtime" : ""
-  } on ${op.buNumber} ${op.phase}`;
+  } on ${op.buNumber} ${op.phase}${
+    hasConflict ? ` — ⚠ ${conflicts.join("; ")}` : ""
+  }`;
 
   const content = (
     <>
+      {hasConflict && (
+        <span
+          aria-label={`Conflict: ${conflicts.join("; ")}`}
+          className="shrink-0 text-amber-600 dark:text-amber-400"
+        >
+          ⚠
+        </span>
+      )}
       <span
         className={`grid h-4 w-4 shrink-0 place-items-center rounded-full text-[9px] font-semibold ${workerColor(workerName)}`}
       >

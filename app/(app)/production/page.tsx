@@ -14,7 +14,9 @@ import {
   today,
 } from "@/lib/schedule";
 import { getUserProfile } from "@/lib/auth";
+import { workerCapacity } from "@/lib/capacity";
 import { BacklogDrawer } from "./backlog-drawer";
+import { LoadView, type LoadRow } from "./load-view";
 import { formatHours, phaseBar, priorityStyles } from "./board-ui";
 import {
   AssignButton,
@@ -66,6 +68,14 @@ export default async function SchedulePage({
   const weekEnd = days[days.length - 1];
   const todayStr = today();
 
+  // Load view horizon: four weeks from the board's Monday, so it moves with
+  // the board rather than being pinned to the real today.
+  const LOAD_WEEKS = 4;
+  const loadWeekStarts = Array.from({ length: LOAD_WEEKS }, (_, i) =>
+    addDays(monday, i * 7)
+  );
+  const horizonEnd = addDays(monday, LOAD_WEEKS * 7 - 1);
+
   // Fortnight columns are half the width, so bars drop the worker name and
   // lean on the colour-coded initials badge (explained in the key).
   const compact = spanDays > 7;
@@ -87,6 +97,7 @@ export default async function SchedulePage({
     { data: assignments },
     { data: operations },
     { data: workers },
+    { data: loadAssignments },
   ] = await Promise.all([
     // Rows: builds that have at least one operation (schedulable work).
     supabase
@@ -97,13 +108,13 @@ export default async function SchedulePage({
       )
       .order("requested_delivery_date", { ascending: true, nullsFirst: false })
       .order("bu_number"),
-    // Company-wide closures shade whole columns; per-worker holidays become
-    // per-assignment conflict flags in a later slice.
+    // All holidays across the LOAD horizon (a superset of the board range):
+    // company-wide closures shade whole columns, worker-specific ones drive
+    // the conflict flags, and both reduce capacity in the load view.
     supabase
       .from("holidays")
-      .select("date_from, date_to, part_of_day, note")
-      .is("worker_id", null)
-      .lte("date_from", weekEnd)
+      .select("worker_id, date_from, date_to, part_of_day, note")
+      .lte("date_from", horizonEnd)
       .gte("date_to", monday),
     supabase
       .from("assignments")
@@ -126,9 +137,15 @@ export default async function SchedulePage({
       .neq("status", "Complete"),
     supabase
       .from("workers")
-      .select("id, name")
+      .select("id, name, worker_phases(phases(code))")
       .eq("active", true)
       .order("name"),
+    // Load view: every assignment across the four-week horizon, phase-tagged.
+    supabase
+      .from("assignments")
+      .select("date, planned_hours, overtime, operations(phases(code))")
+      .gte("date", monday)
+      .lte("date", horizonEnd),
   ]);
 
   // Cell lookup: assignments per build per day.
@@ -144,9 +161,149 @@ export default async function SchedulePage({
 
   function closureFor(date: string) {
     return (closures ?? []).find(
-      (c) => c.date_from <= date && c.date_to >= date
+      (c) =>
+        c.worker_id === null && c.date_from <= date && c.date_to >= date
     );
   }
+
+  // ── Conflict flags (slice 3) ──────────────────────────────────────
+  // Computed per assignment, rendered as an amber ⚠ on the bar with the
+  // reasons in the tooltip. Always a flag, never a block — same philosophy
+  // as material badges (CLAUDE.md rule 7).
+
+  // Standard (non-OT) hours per worker per day, for overload detection.
+  // Assignments are fetched range-wide, so builds outside the visible rows
+  // still count towards a worker's day.
+  const workerDayStd = new Map<string, number>();
+  for (const a of assignments ?? []) {
+    if (a.overtime) continue;
+    const key = `${a.worker_id}|${a.date}`;
+    workerDayStd.set(key, (workerDayStd.get(key) ?? 0) + Number(a.planned_hours));
+  }
+
+  const competency = new Map(
+    (workers ?? []).map((w) => [
+      w.id,
+      new Set(
+        w.worker_phases
+          .map((wp) => wp.phases?.code)
+          .filter((c): c is string => !!c)
+      ),
+    ])
+  );
+
+  const deliveryByBuild = new Map(
+    (builds ?? []).map((b) => [b.id, b.requested_delivery_date])
+  );
+
+  const conflictsById = new Map<string, string[]>();
+  for (const a of assignments ?? []) {
+    const reasons: string[] = [];
+    const phase = a.operations?.phases?.code ?? "";
+
+    const holiday = (closures ?? []).find(
+      (h) =>
+        (h.worker_id === null || h.worker_id === a.worker_id) &&
+        h.date_from <= a.date &&
+        h.date_to >= a.date
+    );
+    if (holiday) {
+      const part =
+        holiday.part_of_day === "full"
+          ? ""
+          : ` (${holiday.part_of_day.toUpperCase()})`;
+      reasons.push(
+        holiday.worker_id === null
+          ? `company closure${part}`
+          : `on holiday${part}`
+      );
+    }
+
+    if (phase && !competency.get(a.worker_id)?.has(phase)) {
+      reasons.push(`no ${phase} competency`);
+    }
+
+    if (isWeekend(a.date)) {
+      if (!a.overtime) reasons.push("weekend day not flagged overtime");
+    } else if (!a.overtime) {
+      const std = workerDayStd.get(`${a.worker_id}|${a.date}`) ?? 0;
+      if (std > 7.5) {
+        reasons.push(`over 7.5h standard this day (${formatHours(std)}h)`);
+      }
+    }
+
+    const due = deliveryByBuild.get(a.operations?.build_id ?? "") ?? null;
+    if (due && a.date > due) {
+      reasons.push(`after requested delivery (${formatDate(due)})`);
+    }
+
+    if (reasons.length > 0) conflictsById.set(a.id, reasons);
+  }
+
+  // ── Load view (spec §6.5) ─────────────────────────────────────────
+  // Committed hours vs standard capacity, per phase, per week. Overtime is
+  // tracked separately: it sits on top of capacity rather than consuming it.
+  const LOAD_PHASES = [
+    { code: "MECH", label: "Mechanical" },
+    { code: "ELEC", label: "Electrical" },
+    { code: "INSP", label: "Inspection" },
+  ];
+
+  const loadRows: LoadRow[] = [
+    ...LOAD_PHASES.map(({ code, label }) => ({
+      key: code,
+      label,
+      cells: loadWeekStarts.map((weekStart) => {
+        const dates = boardDates(weekStart, 7);
+        const capacity = (workers ?? [])
+          .filter((w) => competency.get(w.id)?.has(code))
+          .reduce(
+            (sum, w) => sum + workerCapacity(w.id, dates, closures ?? []),
+            0
+          );
+        const inWeek = (loadAssignments ?? []).filter(
+          (a) =>
+            a.operations?.phases?.code === code &&
+            a.date >= weekStart &&
+            a.date <= dates[6]
+        );
+        return {
+          capacity,
+          standard: inWeek
+            .filter((a) => !a.overtime)
+            .reduce((s, a) => s + Number(a.planned_hours), 0),
+          overtime: inWeek
+            .filter((a) => a.overtime)
+            .reduce((s, a) => s + Number(a.planned_hours), 0),
+        };
+      }),
+    })),
+    {
+      key: "TOTAL",
+      label: "All phases",
+      isTotal: true,
+      cells: loadWeekStarts.map((weekStart) => {
+        const dates = boardDates(weekStart, 7);
+        // Every active worker counted once — no double counting.
+        const capacity = (workers ?? []).reduce(
+          (sum, w) => sum + workerCapacity(w.id, dates, closures ?? []),
+          0
+        );
+        const inWeek = (loadAssignments ?? []).filter(
+          (a) => a.date >= weekStart && a.date <= dates[6]
+        );
+        return {
+          capacity,
+          standard: inWeek
+            .filter((a) => !a.overtime)
+            .reduce((s, a) => s + Number(a.planned_hours), 0),
+          overtime: inWeek
+            .filter((a) => a.overtime)
+            .reduce((s, a) => s + Number(a.planned_hours), 0),
+        };
+      }),
+    },
+  ];
 
   // Backlog: operations with unassigned hours remaining (across ALL dates,
   // not just this week), heaviest remainder first.
@@ -324,6 +481,18 @@ export default async function SchedulePage({
           </span>
           worker (colour is consistent per person)
         </span>
+        <span className="flex items-center gap-1.5">
+          <span aria-hidden className="text-amber-600 dark:text-amber-400">
+            ⚠
+          </span>
+          conflict — hover the bar for the reason
+        </span>
+        {conflictsById.size > 0 && (
+          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+            ⚠ {conflictsById.size} conflict
+            {conflictsById.size === 1 ? "" : "s"} in view
+          </span>
+        )}
       </div>
 
       {/* ── Board ─────────────────────────────────────────────── */}
@@ -451,6 +620,7 @@ export default async function SchedulePage({
                               key={a.id}
                               canWrite={canWrite}
                               compact={compact}
+                              conflicts={conflictsById.get(a.id)}
                               workerName={a.workers?.name ?? "—"}
                               assignment={{
                                 id: a.id,
@@ -485,6 +655,8 @@ export default async function SchedulePage({
         </div>
 
       </div>
+
+      <LoadView weekStarts={loadWeekStarts} rows={loadRows} />
     </main>
     </SchedulingProvider>
   );
