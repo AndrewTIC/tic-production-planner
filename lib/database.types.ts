@@ -739,6 +739,7 @@ export type Database = {
           voided: boolean | null
           voided_at: string | null
           voided_by: string | null
+          worked_minutes: number | null
           worker_id: string | null
         }
         Insert: {
@@ -757,6 +758,7 @@ export type Database = {
           voided?: boolean | null
           voided_at?: string | null
           voided_by?: string | null
+          worked_minutes?: never
           worker_id?: string | null
         }
         Update: {
@@ -775,6 +777,111 @@ export type Database = {
           voided?: boolean | null
           voided_at?: string | null
           voided_by?: string | null
+          worked_minutes?: never
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      active_time_entry_segments: {
+        Row: {
+          auto_closed: boolean | null
+          minutes: number | null
+          operation_id: string | null
+          ot_class: string | null
+          segment_date: string | null
+          segment_end: string | null
+          segment_start: string | null
+          time_entry_id: string | null
+          worker_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voided_time_entries: {
+        Row: {
+          adjusted_at: string | null
+          adjusted_by: string | null
+          auto_closed: boolean | null
+          business_unit: string | null
+          created_at: string | null
+          ended_at: string | null
+          id: string | null
+          operation_id: string | null
+          original_values: Json | null
+          ot_class: string | null
+          started_at: string | null
+          updated_at: string | null
+          voided: boolean | null
+          voided_at: string | null
+          voided_by: string | null
+          worked_minutes: number | null
+          worker_id: string | null
+        }
+        Insert: {
+          adjusted_at?: string | null
+          adjusted_by?: string | null
+          auto_closed?: boolean | null
+          business_unit?: string | null
+          created_at?: string | null
+          ended_at?: string | null
+          id?: string | null
+          operation_id?: string | null
+          original_values?: Json | null
+          ot_class?: string | null
+          started_at?: string | null
+          updated_at?: string | null
+          voided?: boolean | null
+          voided_at?: string | null
+          voided_by?: string | null
+          worked_minutes?: never
+          worker_id?: string | null
+        }
+        Update: {
+          adjusted_at?: string | null
+          adjusted_by?: string | null
+          auto_closed?: boolean | null
+          business_unit?: string | null
+          created_at?: string | null
+          ended_at?: string | null
+          id?: string | null
+          operation_id?: string | null
+          original_values?: Json | null
+          ot_class?: string | null
+          started_at?: string | null
+          updated_at?: string | null
+          voided?: boolean | null
+          voided_at?: string | null
+          voided_by?: string | null
+          worked_minutes?: never
           worker_id?: string | null
         }
         Relationships: [
@@ -799,6 +906,19 @@ export type Database = {
       app_role: { Args: never; Returns: string }
       auto_close_open_time_entries: {
         Args: { before_ts?: string }
+        Returns: number
+      }
+      time_entry_segments: {
+        Args: { ended: string; started: string }
+        Returns: {
+          minutes: number
+          ot_class: string
+          segment_end: string
+          segment_start: string
+        }[]
+      }
+      worked_minutes: {
+        Args: { ended: string; started: string }
         Returns: number
       }
     }
