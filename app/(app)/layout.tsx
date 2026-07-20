@@ -87,6 +87,12 @@ export default async function AppLayout({
             >
               Holidays
             </Link>
+            <Link
+              href="/reports"
+              className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+            >
+              Reports
+            </Link>
             {/* Corrections are admin-only (RLS enforces it; this just keeps
                 the nav honest for everyone else). */}
             {profile.role === "admin" && (
