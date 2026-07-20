@@ -6,12 +6,17 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { materialBadge } from "@/lib/materials";
 import {
   addMaterialItem,
+  addNote,
   addOperation,
+  deleteDocument,
   deleteMaterialItem,
   deleteOperation,
+  downloadDocument,
   setMaterialItemBookedIn,
+  setNoteHidden,
   updateBuild,
   updateOperation,
+  uploadDocument,
 } from "../actions";
 import { CustomerProjectSelect } from "../customer-project-select";
 import { MaterialBadgeChip } from "../material-badge";
@@ -33,7 +38,23 @@ const errorMessages: Record<string, string> = {
   op_save: "Could not save the operation — try again.",
   op_delete:
     "Could not delete the operation — it may already have assignments or booked time.",
+  note_empty: "Write something before adding the note.",
+  note_save: "Could not add the note — try again.",
+  note_hide: "Could not change the note — try again.",
+  doc_missing: "Choose a file to upload.",
+  doc_size: "That file is over the 50 MB limit.",
+  doc_upload: "Could not upload the file — try again.",
+  doc_save: "Uploaded the file but could not record it — try again.",
+  doc_download: "Could not open that document — try again.",
+  doc_delete: "Could not remove that document — try again.",
 };
+
+function formatBytes(bytes: number | null): string {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 const OPERATION_STATUSES = ["Pending", "In Progress", "Complete"];
 const PHASE_ORDER: Record<string, number> = { MECH: 1, ELEC: 2, INSP: 3 };
@@ -71,6 +92,41 @@ export default async function BuildPage({
     supabase.from("build_statuses").select("id, code, name").order("sequence"),
     supabase.from("phases").select("id, code, name").order("code"),
   ]);
+
+  // Notes and documents (spec §6.7). Notes are the append-only activity log;
+  // hidden ones are visible to Admin only, never deleted.
+  const [{ data: notes }, { data: documents }, { data: profiles }] =
+    await Promise.all([
+      supabase
+        .from("notes")
+        .select("id, body, hidden, author_id, created_at")
+        .eq("build_id", id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("documents")
+        .select("id, filename, file_type, size_bytes, note_id, uploaded_by, created_at")
+        .eq("build_id", id)
+        .order("created_at", { ascending: false }),
+      supabase.from("profiles").select("id, display_name"),
+    ]);
+
+  const who = new Map((profiles ?? []).map((p) => [p.id, p.display_name]));
+  const isAdmin = auth?.profile.role === "admin";
+  const canNote =
+    auth !== null &&
+    ["admin", "commercial", "workshop"].includes(auth.profile.role);
+  const visibleNotes = (notes ?? []).filter((n) => isAdmin || !n.hidden);
+
+  // Attachments belong under the note that carries them; the Documents
+  // section lists the build's standalone paperwork.
+  const standaloneDocs = (documents ?? []).filter((d) => !d.note_id);
+  const docsByNote = new Map<string, typeof documents>();
+  for (const d of documents ?? []) {
+    if (!d.note_id) continue;
+    const list = docsByNote.get(d.note_id);
+    if (list) list.push(d);
+    else docsByNote.set(d.note_id, [d]);
+  }
 
   if (!build) notFound();
 
@@ -672,6 +728,213 @@ export default async function BuildPage({
               Add line
             </button>
           </form>
+        )}
+      </section>
+
+      {/* ── Documents (spec §6.7) ──────────────────────────────── */}
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          Documents
+        </h2>
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          Drawings, red-pen markups, photos, and paperwork for this build.
+          Downloads open through a short-lived link rather than a public URL.
+        </p>
+
+        {standaloneDocs.length === 0 ? (
+          <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
+            No documents yet.
+            {(documents ?? []).length > 0 &&
+              " Photos attached to notes appear with their note below."}
+          </p>
+        ) : (
+          <ul className="mt-4 divide-y divide-zinc-200 rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+            {standaloneDocs.map((d) => (
+              <li
+                key={d.id}
+                className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3"
+              >
+                <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                  {d.filename}
+                </span>
+                <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                  {formatBytes(d.size_bytes)}
+                </span>
+                <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                  {who.get(d.uploaded_by) ?? "—"} ·{" "}
+                  {formatDateTime(d.created_at)}
+                </span>
+                <span className="ml-auto flex gap-2">
+                  <form action={downloadDocument.bind(null, build.id, d.id)}>
+                    <button
+                      type="submit"
+                      className="rounded border border-zinc-300 px-2 py-1 text-xs text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                    >
+                      Download
+                    </button>
+                  </form>
+                  {canWrite && (
+                    <form action={deleteDocument.bind(null, build.id, d.id)}>
+                      <button
+                        type="submit"
+                        className="rounded border border-red-200 px-2 py-1 text-xs text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+                      >
+                        Remove
+                      </button>
+                    </form>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {canWrite && (
+          <form
+            action={uploadDocument.bind(null, build.id)}
+            className="mt-4 flex flex-wrap items-end gap-3"
+          >
+            <div>
+              <label htmlFor="file" className={labelClasses}>
+                Add a document
+              </label>
+              <input
+                id="file"
+                name="file"
+                type="file"
+                required
+                className="mt-1 block text-sm text-zinc-700 file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-zinc-700 dark:text-zinc-300 dark:file:bg-zinc-800 dark:file:text-zinc-300"
+              />
+            </div>
+            <button
+              type="submit"
+              className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              Upload
+            </button>
+            <span className="text-xs text-zinc-400 dark:text-zinc-500">
+              Up to 50 MB.
+            </span>
+          </form>
+        )}
+      </section>
+
+      {/* ── Notes (spec §6.7) — append-only activity log ───────── */}
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          Notes
+        </h2>
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          The build’s activity log. Notes cannot be edited or deleted once
+          added — an Admin can hide one, and it stays on the record.
+        </p>
+
+        {canNote && (
+          <form action={addNote.bind(null, build.id)} className="mt-4">
+            <label htmlFor="body" className="sr-only">
+              Note
+            </label>
+            <textarea
+              id="body"
+              name="body"
+              rows={3}
+              required
+              placeholder="What happened, what changed, what to watch for…"
+              className={inputClasses}
+            />
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <button
+                type="submit"
+                className="rounded-lg bg-lime-500 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-lime-600"
+              >
+                Add note
+              </button>
+              <label htmlFor="attachment" className="sr-only">
+                Attach a photo or file
+              </label>
+              <input
+                id="attachment"
+                name="attachment"
+                type="file"
+                className="text-sm text-zinc-700 file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-700 dark:text-zinc-300 dark:file:bg-zinc-800 dark:file:text-zinc-300"
+              />
+              <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                Optional — attach a red-pen photo or file.
+              </span>
+            </div>
+          </form>
+        )}
+
+        {visibleNotes.length === 0 ? (
+          <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
+            Nothing logged yet.
+          </p>
+        ) : (
+          <ol className="mt-4 space-y-3">
+            {visibleNotes.map((n) => (
+              <li
+                key={n.id}
+                className={`rounded-xl border p-4 ${
+                  n.hidden
+                    ? "border-dashed border-zinc-300 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900/50"
+                    : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+                }`}
+              >
+                <div className="flex flex-wrap items-baseline gap-2 text-sm">
+                  <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                    {who.get(n.author_id) ?? "Unknown"}
+                  </span>
+                  <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                    {formatDateTime(n.created_at)}
+                  </span>
+                  {n.hidden && (
+                    <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                      hidden — Admins only
+                    </span>
+                  )}
+                  {isAdmin && (
+                    <form
+                      action={setNoteHidden.bind(
+                        null,
+                        build.id,
+                        n.id,
+                        !n.hidden
+                      )}
+                      className="ml-auto"
+                    >
+                      <button
+                        type="submit"
+                        className="rounded border border-zinc-300 px-2 py-1 text-xs text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                      >
+                        {n.hidden ? "Unhide" : "Hide"}
+                      </button>
+                    </form>
+                  )}
+                </div>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
+                  {n.body}
+                </p>
+                {(docsByNote.get(n.id) ?? []).map((d) => (
+                  <form
+                    key={d.id}
+                    action={downloadDocument.bind(null, build.id, d.id)}
+                    className="mt-2"
+                  >
+                    <button
+                      type="submit"
+                      className="flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                    >
+                      <span aria-hidden>📎</span>
+                      {d.filename}
+                      <span className="text-zinc-400 dark:text-zinc-500">
+                        {formatBytes(d.size_bytes)}
+                      </span>
+                    </button>
+                  </form>
+                ))}
+              </li>
+            ))}
+          </ol>
         )}
       </section>
 

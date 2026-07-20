@@ -202,6 +202,176 @@ export async function deleteOperation(buildId: string, operationId: string) {
   redirect(`/builds/${buildId}`);
 }
 
+// ── Notes and documents (spec §6.7) ───────────────────────────────
+// Notes are append-only: everything except `hidden` is frozen by a trigger
+// once written, and there is no delete policy for any role. Documents live
+// in the private build-documents bucket; downloads are signed server-side.
+
+const DOCUMENTS_BUCKET = "build-documents";
+
+export async function addNote(buildId: string, formData: FormData) {
+  const body = String(formData.get("body") ?? "").trim();
+  if (!body) redirect(`/builds/${buildId}?error=note_empty`);
+
+  const file = formData.get("attachment");
+  const hasFile = file instanceof File && file.size > 0;
+  if (hasFile && file.size > 52_428_800) {
+    redirect(`/builds/${buildId}?error=doc_size`);
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  // author_id must be the signed-in user — RLS checks it too.
+  const { data: note, error } = await supabase
+    .from("notes")
+    .insert({ build_id: buildId, author_id: user.id, body })
+    .select("id")
+    .single();
+
+  if (error || !note) redirect(`/builds/${buildId}?error=note_save`);
+
+  // Attachment rides on the note. This is the only route by which workshop
+  // can add a document at all — the documents insert policy requires a
+  // note_id for that role, which is what makes red-pen photos from the
+  // bench legitimate without opening the whole repository to them.
+  if (hasFile) {
+    const safeName = file.name.replace(/[^\w.\-]+/g, "_").slice(-100);
+    const path = `${buildId}/${crypto.randomUUID()}-${safeName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(DOCUMENTS_BUCKET)
+      .upload(path, file, { contentType: file.type || undefined });
+
+    if (uploadError) redirect(`/builds/${buildId}?error=doc_upload`);
+
+    const { error: rowError } = await supabase.from("documents").insert({
+      build_id: buildId,
+      note_id: note.id,
+      filename: file.name,
+      storage_path: path,
+      file_type: file.type || null,
+      size_bytes: file.size,
+      uploaded_by: user.id,
+    });
+
+    if (rowError) {
+      await supabase.storage.from(DOCUMENTS_BUCKET).remove([path]);
+      redirect(`/builds/${buildId}?error=doc_save`);
+    }
+  }
+
+  revalidatePath(`/builds/${buildId}`);
+  redirect(`/builds/${buildId}`);
+}
+
+// Admin only, and the trigger allows nothing but `hidden` to move.
+export async function setNoteHidden(
+  buildId: string,
+  noteId: string,
+  hidden: boolean
+) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("notes")
+    .update({ hidden })
+    .eq("id", noteId);
+
+  if (error) redirect(`/builds/${buildId}?error=note_hide`);
+
+  revalidatePath(`/builds/${buildId}`);
+  redirect(`/builds/${buildId}`);
+}
+
+export async function uploadDocument(buildId: string, formData: FormData) {
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    redirect(`/builds/${buildId}?error=doc_missing`);
+  }
+  if (file.size > 52_428_800) {
+    redirect(`/builds/${buildId}?error=doc_size`);
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  // Foldered by build, with a random prefix so two people uploading
+  // "drawing.pdf" on the same build cannot overwrite each other.
+  const safeName = file.name.replace(/[^\w.\-]+/g, "_").slice(-100);
+  const path = `${buildId}/${crypto.randomUUID()}-${safeName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(DOCUMENTS_BUCKET)
+    .upload(path, file, { contentType: file.type || undefined });
+
+  if (uploadError) redirect(`/builds/${buildId}?error=doc_upload`);
+
+  const { error } = await supabase.from("documents").insert({
+    build_id: buildId,
+    filename: file.name,
+    storage_path: path,
+    file_type: file.type || null,
+    size_bytes: file.size,
+    uploaded_by: user.id,
+  });
+
+  // Do not leave an orphan object behind if the row is refused.
+  if (error) {
+    await supabase.storage.from(DOCUMENTS_BUCKET).remove([path]);
+    redirect(`/builds/${buildId}?error=doc_save`);
+  }
+
+  revalidatePath(`/builds/${buildId}`);
+  redirect(`/builds/${buildId}`);
+}
+
+// Short-lived signed URL: the bucket is private, so a copied link expires
+// instead of exposing customer drawings indefinitely.
+export async function downloadDocument(buildId: string, documentId: string) {
+  const supabase = await createClient();
+  const { data: doc } = await supabase
+    .from("documents")
+    .select("storage_path, filename")
+    .eq("id", documentId)
+    .single();
+
+  if (!doc) redirect(`/builds/${buildId}?error=doc_missing`);
+
+  const { data, error } = await supabase.storage
+    .from(DOCUMENTS_BUCKET)
+    .createSignedUrl(doc.storage_path, 60, { download: doc.filename });
+
+  if (error || !data) redirect(`/builds/${buildId}?error=doc_download`);
+  redirect(data.signedUrl);
+}
+
+export async function deleteDocument(buildId: string, documentId: string) {
+  const supabase = await createClient();
+  const { data: doc } = await supabase
+    .from("documents")
+    .select("storage_path")
+    .eq("id", documentId)
+    .single();
+
+  if (!doc) redirect(`/builds/${buildId}?error=doc_missing`);
+
+  const { error } = await supabase.from("documents").delete().eq("id", documentId);
+  if (error) redirect(`/builds/${buildId}?error=doc_delete`);
+
+  // Row first, then the file: a failed object removal leaves rubbish in the
+  // bucket, whereas the reverse would leave a row pointing at nothing.
+  await supabase.storage.from(DOCUMENTS_BUCKET).remove([doc.storage_path]);
+
+  revalidatePath(`/builds/${buildId}`);
+  redirect(`/builds/${buildId}`);
+}
+
 // ── Material lines (spec §6.3) ────────────────────────────────────
 // Free-text component part numbers: bought-in components stay out of the
 // ESD parts register. Lines are a chase list, not an audit record, so a
