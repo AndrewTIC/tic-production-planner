@@ -23,20 +23,20 @@ const reports = [
     title: "Utilisation",
     description:
       "Hours booked per worker or phase over a period, split standard / OT 1.5× / OT 2×, against hours available.",
-    ready: false,
+    ready: true,
   },
   {
     href: "/reports/adherence",
     title: "Schedule adherence",
     description:
       "Builds whose scheduled completion falls after the requested delivery date.",
-    ready: false,
+    ready: true,
   },
   {
     href: "/reports/customers",
     title: "Customer and project analysis",
     description: "Builds, hours, and adherence rolled up per customer and project.",
-    ready: false,
+    ready: true,
   },
 ];
 

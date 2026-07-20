@@ -10,10 +10,18 @@ export type CsvColumn<T> = {
 // Excel treats a leading =, +, -, or @ as a formula. Prefixing with a
 // single quote neutralises it without changing what a human reads — a BU
 // number or part code beginning with "-" must not become a calculation.
+//
+// A negative NUMBER is exempt: -42.50 is a legitimate value, and quoting it
+// would land in Excel as text, silently breaking any column Finance tries to
+// sum. Only non-numeric values that open with a formula character are risky.
+const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
+
 function escapeCell(raw: string | number | null | undefined): string {
   if (raw === null || raw === undefined) return "";
   let text = String(raw);
-  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  if (/^[=+\-@\t\r]/.test(text) && !PLAIN_NUMBER.test(text)) {
+    text = `'${text}`;
+  }
   if (/["\n\r,]/.test(text)) text = `"${text.replace(/"/g, '""')}"`;
   return text;
 }
