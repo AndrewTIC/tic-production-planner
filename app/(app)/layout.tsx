@@ -87,6 +87,16 @@ export default async function AppLayout({
             >
               Holidays
             </Link>
+            {/* Corrections are admin-only (RLS enforces it; this just keeps
+                the nav honest for everyone else). */}
+            {profile.role === "admin" && (
+              <Link
+                href="/clockings"
+                className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+              >
+                Clockings
+              </Link>
+            )}
           </nav>
           <div className="ml-auto flex items-center gap-3">
             <ThemeToggle />
