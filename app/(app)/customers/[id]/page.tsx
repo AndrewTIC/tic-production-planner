@@ -63,7 +63,7 @@ export default async function CustomerPage({
             required
             disabled={!canWrite}
             defaultValue={customer.name}
-            className="mt-1 block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 disabled:bg-zinc-100 disabled:text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:disabled:bg-zinc-900 dark:disabled:text-zinc-400"
+            className="mt-1 block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 focus:border-lime-700 focus:outline-none focus:ring-1 focus:ring-lime-800 disabled:bg-zinc-100 disabled:text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:disabled:bg-zinc-900 dark:disabled:text-zinc-400"
           />
         </div>
 
@@ -80,9 +80,49 @@ export default async function CustomerPage({
             rows={4}
             disabled={!canWrite}
             defaultValue={customer.notes ?? ""}
-            className="mt-1 block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 disabled:bg-zinc-100 disabled:text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:disabled:bg-zinc-900 dark:disabled:text-zinc-400"
+            className="mt-1 block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 focus:border-lime-700 focus:outline-none focus:ring-1 focus:ring-lime-800 disabled:bg-zinc-100 disabled:text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:disabled:bg-zinc-900 dark:disabled:text-zinc-400"
           />
         </div>
+
+        <fieldset className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+          <legend className="px-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Badge colours
+          </legend>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">
+            How this customer appears on the production board:
+          </p>
+          <span
+            className="mt-2 inline-block rounded-full px-3 py-1 text-sm font-medium"
+            style={{
+              backgroundColor: customer.badge_bg,
+              color: customer.badge_text,
+            }}
+          >
+            {customer.name}
+          </span>
+          <div className="mt-3 flex flex-wrap gap-6">
+            <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+              Fill
+              <input
+                type="color"
+                name="badge_bg"
+                disabled={!canWrite}
+                defaultValue={customer.badge_bg}
+                className="h-9 w-14 cursor-pointer rounded border border-zinc-300 dark:border-zinc-700"
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+              Font
+              <input
+                type="color"
+                name="badge_text"
+                disabled={!canWrite}
+                defaultValue={customer.badge_text}
+                className="h-9 w-14 cursor-pointer rounded border border-zinc-300 dark:border-zinc-700"
+              />
+            </label>
+          </div>
+        </fieldset>
 
         <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
           <input
@@ -119,7 +159,7 @@ export default async function CustomerPage({
           <div className="flex gap-3">
             <button
               type="submit"
-              className="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+              className="rounded-lg bg-lime-500 px-4 py-2.5 text-sm font-semibold text-neutral-800 hover:bg-lime-600"
             >
               Save changes
             </button>

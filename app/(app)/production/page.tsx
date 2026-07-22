@@ -35,7 +35,8 @@ const legend = [
   { label: "Mechanical", swatch: "bg-lime-600" },
   { label: "Electrical", swatch: "bg-status-progress" },
   { label: "Inspection", swatch: "bg-status-review" },
-  { label: "Overtime", swatch: "bg-amber-400" },
+  { label: "OT planned (amber edge on the bar)", swatch: "bg-amber-400" },
+  { label: "⏱ OT booked — actual clockings, incl. corrections", swatch: "bg-amber-500" },
 ];
 
 // Vertical separators between day columns — multi-day work reads against
@@ -98,13 +99,16 @@ export default async function SchedulePage({
     { data: operations },
     { data: workers },
     { data: loadAssignments },
+    { data: opBuildMap },
+    { data: bookedOt },
   ] = await Promise.all([
     // Rows: builds that have at least one operation (schedulable work).
     supabase
       .from("builds")
       .select(
         `id, bu_number, priority, requested_delivery_date,
-         parts(part_number), customers(name), operations!inner(id)`
+         parts(part_number), customers(name, badge_bg, badge_text),
+         operations!inner(id)`
       )
       .order("requested_delivery_date", { ascending: true, nullsFirst: false })
       .order("bu_number"),
@@ -146,6 +150,15 @@ export default async function SchedulePage({
       .select("date, planned_hours, overtime, operations(phases(code))")
       .gte("date", monday)
       .lte("date", horizonEnd),
+    supabase.from("operations").select("id, build_id"),
+    // Actual overtime BOOKED (from clockings, incl. admin corrections) —
+    // rendered on the board so amended reality shows beside the plan.
+    supabase
+      .from("active_time_entry_segments")
+      .select("operation_id, ot_class, minutes, segment_date")
+      .neq("ot_class", "none")
+      .gte("segment_date", monday)
+      .lte("segment_date", weekEnd),
   ]);
 
   // Cell lookup: assignments per build per day.
@@ -238,6 +251,19 @@ export default async function SchedulePage({
     }
 
     if (reasons.length > 0) conflictsById.set(a.id, reasons);
+  }
+
+  // Booked OT per build per day, for the ⏱ chips on the board.
+  const buildByOp = new Map((opBuildMap ?? []).map((o) => [o.id, o.build_id]));
+  const bookedOtByCell = new Map<string, { m15: number; m2: number }>();
+  for (const s of bookedOt ?? []) {
+    const buildId = buildByOp.get(s.operation_id ?? "");
+    if (!buildId || !s.minutes || !s.segment_date) continue;
+    const key = `${buildId}|${s.segment_date}`;
+    const cur = bookedOtByCell.get(key) ?? { m15: 0, m2: 0 };
+    if (s.ot_class === "2.0") cur.m2 += s.minutes;
+    else cur.m15 += s.minutes;
+    bookedOtByCell.set(key, cur);
   }
 
   // ── Load view (spec §6.5) ─────────────────────────────────────────
@@ -495,6 +521,25 @@ export default async function SchedulePage({
         )}
       </div>
 
+      {/* Load sits ABOVE the board (Andrew, 20 Jul): the schedule grows
+          long, and capacity must never scroll out of sight. Collapsed by
+          default so the board stays the hero. */}
+      <details className="mt-4 rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 open:pb-2">
+        <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-zinc-900 marker:text-lime-700 dark:text-zinc-50">
+          Load & capacity — this week{" "}
+          {(() => {
+            const wk = loadRows[loadRows.length - 1]?.cells[0];
+            return wk && wk.capacity > 0
+              ? `${Math.round(((wk.standard + wk.overtime) / wk.capacity) * 100)}%`
+              : "—";
+          })()}{" "}
+          · expand for the four-week view
+        </summary>
+        <div className="px-4 pb-2">
+          <LoadView weekStarts={loadWeekStarts} rows={loadRows} />
+        </div>
+      </details>
+
       {/* ── Board ─────────────────────────────────────────────── */}
       <div className="mt-3">
         <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
@@ -584,9 +629,21 @@ export default async function SchedulePage({
                       >
                         {b.priority}
                       </span>
-                      <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
-                        {b.parts?.part_number ?? "—"} ·{" "}
-                        {b.customers?.name ?? "—"}
+                      <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                        <span className="font-mono">
+                          {b.parts?.part_number ?? "—"}
+                        </span>
+                        {/* Customer identity chip — colours set on the
+                            customer record. */}
+                        <span
+                          className="rounded-full px-2 py-0.5 font-medium"
+                          style={{
+                            backgroundColor: b.customers?.badge_bg ?? "#B0CB1F",
+                            color: b.customers?.badge_text ?? "#24292E",
+                          }}
+                        >
+                          {b.customers?.name ?? "—"}
+                        </span>
                       </span>
                       {b.requested_delivery_date && (
                         <span className="block text-[10px] text-zinc-400 dark:text-zinc-500">
@@ -639,6 +696,30 @@ export default async function SchedulePage({
                               }}
                             />
                           ))}
+                          {(() => {
+                            const ot = bookedOtByCell.get(`${b.id}|${d}`);
+                            if (!ot) return null;
+                            return (
+                              <p className="mt-0.5 flex flex-wrap gap-1 text-[10px] font-semibold">
+                                {ot.m15 > 0 && (
+                                  <span
+                                    className="rounded bg-amber-500 px-1 py-0.5 text-neutral-800"
+                                    title="Overtime booked at 1.5× — from actual clockings, including admin corrections"
+                                  >
+                                    ⏱ {formatHours(ot.m15 / 60)}h OT
+                                  </span>
+                                )}
+                                {ot.m2 > 0 && (
+                                  <span
+                                    className="rounded bg-red-600 px-1 py-0.5 text-white"
+                                    title="Sunday overtime booked at 2× — from actual clockings"
+                                  >
+                                    ⏱ {formatHours(ot.m2 / 60)}h 2×
+                                  </span>
+                                )}
+                              </p>
+                            );
+                          })()}
                           {cell.length > 1 && (
                             <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
                               {formatHours(loaded)}h total
@@ -655,8 +736,6 @@ export default async function SchedulePage({
         </div>
 
       </div>
-
-      <LoadView weekStarts={loadWeekStarts} rows={loadRows} />
     </main>
     </SchedulingProvider>
   );

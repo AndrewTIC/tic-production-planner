@@ -23,12 +23,12 @@ export default async function WorkersPage() {
     <main>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-          Workers
+          Team
         </h1>
         {canWrite && (
           <Link
             href="/workers/new"
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+            className="rounded-lg bg-lime-500 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-lime-600"
           >
             New worker
           </Link>
@@ -68,7 +68,7 @@ export default async function WorkersPage() {
             </thead>
             <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-800 dark:bg-zinc-950">
               {workers.map((w) => (
-                <tr key={w.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900">
+                <tr key={w.id} className="hover:bg-lime-100/40 dark:hover:bg-lime-800/10">
                   <td className="whitespace-nowrap px-4 py-3">
                     <Link
                       href={`/workers/${w.id}`}

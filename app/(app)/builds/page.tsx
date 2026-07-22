@@ -33,20 +33,21 @@ export default async function BuildsPage() {
     <main>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-          Builds
+          Order Book
         </h1>
         {canWrite && (
           <Link
             href="/builds/new"
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+            className="rounded-lg bg-lime-500 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-lime-600"
           >
             New build
           </Link>
         )}
       </div>
       <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-        The BU register — every unit of work through the workshop. Material
-        badges are information for the scheduler, never a gate.
+        Every order on the books, from handover to despatch — one row per BU.
+        Schedule the work itself from Production; material badges inform,
+        never gate.
       </p>
 
       {error ? (
@@ -91,7 +92,7 @@ export default async function BuildsPage() {
             </thead>
             <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-800 dark:bg-zinc-950">
               {builds.map((b) => (
-                <tr key={b.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900">
+                <tr key={b.id} className="hover:bg-lime-100/40 dark:hover:bg-lime-800/10">
                   <td className="whitespace-nowrap px-4 py-3">
                     <Link
                       href={`/builds/${b.id}`}

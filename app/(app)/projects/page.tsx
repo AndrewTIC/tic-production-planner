@@ -28,7 +28,7 @@ export default async function ProjectsPage() {
         {canWrite && (
           <Link
             href="/projects/new"
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+            className="rounded-lg bg-lime-500 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-lime-600"
           >
             New project
           </Link>
@@ -69,7 +69,7 @@ export default async function ProjectsPage() {
             </thead>
             <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-800 dark:bg-zinc-950">
               {sorted.map((p) => (
-                <tr key={p.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900">
+                <tr key={p.id} className="hover:bg-lime-100/40 dark:hover:bg-lime-800/10">
                   <td className="whitespace-nowrap px-4 py-3 text-zinc-500 dark:text-zinc-400">
                     {p.customers?.name ?? "—"}
                   </td>

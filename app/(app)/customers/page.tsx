@@ -24,7 +24,7 @@ export default async function CustomersPage() {
         {canWrite && (
           <Link
             href="/customers/new"
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+            className="rounded-lg bg-lime-500 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-lime-600"
           >
             New customer
           </Link>
@@ -63,7 +63,7 @@ export default async function CustomersPage() {
               {customers.map((c) => (
                 <tr
                   key={c.id}
-                  className="hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                  className="hover:bg-lime-100/40 dark:hover:bg-lime-800/10"
                 >
                   <td className="px-4 py-3">
                     <Link

@@ -11,28 +11,28 @@ export default async function PartsPage() {
   const supabase = await createClient();
   const { data: parts, error } = await supabase
     .from("parts")
-    .select("id, part_number, description, created_at")
+    .select("id, part_number, description, created_at, builds(count)")
     .order("part_number");
 
   return (
     <main>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-          Parts
+          Build history
         </h1>
         {canWrite && (
           <Link
             href="/parts/new"
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+            className="rounded-lg bg-lime-500 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-lime-600"
           >
             New part
           </Link>
         )}
       </div>
       <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-        ESD-built assemblies. A part is built many times — each build links
-        back here, so the full build history of a part number stays in one
-        place.
+        Look up any TIC part number to see every time it has been built —
+        the BU numbers, what the labour really was, and where the notes and
+        drawings live.
       </p>
 
       {error ? (
@@ -56,13 +56,16 @@ export default async function PartsPage() {
                   Description
                 </th>
                 <th className="px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">
+                  Times built
+                </th>
+                <th className="px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">
                   Added
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-800 dark:bg-zinc-950">
               {parts.map((p) => (
-                <tr key={p.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900">
+                <tr key={p.id} className="hover:bg-lime-100/40 dark:hover:bg-lime-800/10">
                   <td className="whitespace-nowrap px-4 py-3">
                     <Link
                       href={`/parts/${p.id}`}
@@ -73,6 +76,9 @@ export default async function PartsPage() {
                   </td>
                   <td className="max-w-md truncate px-4 py-3 text-zinc-500 dark:text-zinc-400">
                     {p.description ?? ""}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 tabular-nums text-zinc-700 dark:text-zinc-300">
+                    {p.builds?.[0]?.count ?? 0}×
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-zinc-500 dark:text-zinc-400">
                     {formatDate(p.created_at)}

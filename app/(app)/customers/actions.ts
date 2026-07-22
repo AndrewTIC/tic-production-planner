@@ -33,12 +33,28 @@ export async function updateCustomer(id: string, formData: FormData) {
   // Checkbox: present in the form data only when ticked.
   const active = formData.get("active") === "on";
 
+  // Badge colours: the customer's identity chip on the production board.
+  // <input type="color"> always posts #rrggbb; validate anyway, since the
+  // DB check constraint would reject anything else.
+  const hex = /^#[0-9a-fA-F]{6}$/;
+  const badgeBg = String(formData.get("badge_bg") ?? "#B0CB1F");
+  const badgeText = String(formData.get("badge_text") ?? "#24292E");
+  if (!hex.test(badgeBg) || !hex.test(badgeText)) {
+    redirect(`/customers/${id}?error=save`);
+  }
+
   if (!name) redirect(`/customers/${id}?error=name`);
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("customers")
-    .update({ name, notes: notes || null, active })
+    .update({
+      name,
+      notes: notes || null,
+      active,
+      badge_bg: badgeBg,
+      badge_text: badgeText,
+    })
     .eq("id", id);
 
   if (error) redirect(`/customers/${id}?error=save`);
