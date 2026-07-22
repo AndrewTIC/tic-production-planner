@@ -1,7 +1,10 @@
+import Image from "next/image";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { login } from "./actions";
 
-// Login is the one screen every device sees, including the shopfloor PC and
-// tablets — large targets and no cramped layout at any width.
+// Login: the front door. The backdrop is the TIC swoosh, slowed down —
+// two drifting lime arcs and soft glows behind a calm card. Pure CSS
+// animation (keyframes in globals.css), stilled for reduced-motion users.
 export default async function LoginPage({
   searchParams,
 }: {
@@ -10,16 +13,64 @@ export default async function LoginPage({
   const { error } = await searchParams;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-zinc-100 p-6 dark:bg-zinc-950">
-      <div className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
-          ESD Production Planner
-        </h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Sign in to continue
-        </p>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-neutral-50 p-6 dark:bg-zinc-950">
+      {/* ── Dynamic backdrop ─────────────────────────────────────── */}
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        {/* Soft lime glows */}
+        <div className="animate-drift-a absolute -left-40 -top-40 h-[34rem] w-[34rem] rounded-full bg-lime-500/25 blur-3xl dark:bg-lime-500/15" />
+        <div className="animate-drift-b absolute -bottom-48 -right-32 h-[38rem] w-[38rem] rounded-full bg-lime-600/20 blur-3xl dark:bg-lime-600/10" />
+        {/* The swooshes — the logo's arcs, writ large */}
+        <svg
+          className="animate-drift-b absolute -right-[15%] -top-[30%] h-[80vh] w-[80vw] opacity-40 dark:opacity-25"
+          viewBox="0 0 600 400"
+          fill="none"
+        >
+          <path
+            d="M40 300 C 140 80, 460 40, 580 140"
+            stroke="#B0CB1F"
+            strokeWidth="34"
+            strokeLinecap="round"
+          />
+        </svg>
+        <svg
+          className="animate-drift-a absolute -bottom-[28%] -left-[18%] h-[80vh] w-[80vw] opacity-40 dark:opacity-25"
+          viewBox="0 0 600 400"
+          fill="none"
+        >
+          <path
+            d="M560 100 C 460 320, 140 360, 20 260"
+            stroke="#7A8F14"
+            strokeWidth="30"
+            strokeLinecap="round"
+          />
+        </svg>
+      </div>
 
-        <form action={login} className="mt-6 space-y-4">
+      {/* Theme choice available before signing in */}
+      <div className="absolute right-4 top-4 z-10">
+        <ThemeToggle />
+      </div>
+
+      {/* ── Card ─────────────────────────────────────────────────── */}
+      <div className="relative w-full max-w-sm rounded-3xl border border-zinc-200/80 bg-white/95 p-8 shadow-(--shadow-3) backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/95">
+        <div className="flex flex-col items-center text-center">
+          <Image
+            src="/TIC-logo.png"
+            alt="TIC"
+            width={76}
+            height={72}
+            priority
+            className="h-16 w-auto"
+          />
+          <h1 className="mt-4 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+            Production Planner
+          </h1>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            Engineered Services Division
+          </p>
+        </div>
+
+        <form action={login} className="mt-7 space-y-4">
           <div>
             <label
               htmlFor="email"
@@ -68,7 +119,7 @@ export default async function LoginPage({
           </button>
         </form>
 
-        <p className="mt-6 text-xs text-zinc-400 dark:text-zinc-500">
+        <p className="mt-6 text-center text-xs text-zinc-400 dark:text-zinc-500">
           Accounts are managed by an administrator — there is no self-service
           sign-up.
         </p>
