@@ -8,14 +8,21 @@ deployed. One double-click once set up.
 Run this once in PowerShell (from anywhere):
 
 ```powershell
-$s = (New-Object -ComObject WScript.Shell).CreateShortcut("$env:USERPROFILE\Desktop\Production Planner.lnk")
+$desktop = [Environment]::GetFolderPath("Desktop")
+$s = (New-Object -ComObject WScript.Shell).CreateShortcut("$desktop\Production Planner.lnk")
 $s.TargetPath = "powershell.exe"
-$s.Arguments  = '-ExecutionPolicy Bypass -File "C:\Users\andre\tic-production-planner\start-planner.ps1"'
+$s.Arguments  = '-NoExit -ExecutionPolicy Bypass -File "C:\Users\andre\tic-production-planner\start-planner.ps1"'
+$s.WorkingDirectory = "C:\Users\andre\tic-production-planner"
 $s.IconLocation = "C:\Program Files\Docker\Docker\Docker Desktop.exe,0"
 $s.Save()
 ```
 
-(Adjust the repo path on Liam's machine.)
+(Adjust the repo path on Liam's machine. `-NoExit` keeps the window open
+so the URLs stay visible; `[Environment]::GetFolderPath` finds the real
+Desktop even when it's redirected to OneDrive.)
+
+The shortcut is already on Andrew's desktop as **Production Planner** —
+this recipe is for setting it up on another machine.
 
 ## Each time you want the planner
 

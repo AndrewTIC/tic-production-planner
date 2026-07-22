@@ -15,35 +15,14 @@ export default async function LoginPage({
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-neutral-50 p-6 dark:bg-zinc-950">
       {/* ── Dynamic backdrop ─────────────────────────────────────── */}
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        {/* Soft lime glows */}
-        <div className="animate-drift-a absolute -left-40 -top-40 h-[34rem] w-[34rem] rounded-full bg-lime-500/25 blur-3xl dark:bg-lime-500/15" />
-        <div className="animate-drift-b absolute -bottom-48 -right-32 h-[38rem] w-[38rem] rounded-full bg-lime-600/20 blur-3xl dark:bg-lime-600/10" />
-        {/* The swooshes — the logo's arcs, writ large */}
-        <svg
-          className="animate-drift-b absolute -right-[15%] -top-[30%] h-[80vh] w-[80vw] opacity-40 dark:opacity-25"
-          viewBox="0 0 600 400"
-          fill="none"
-        >
-          <path
-            d="M40 300 C 140 80, 460 40, 580 140"
-            stroke="#B0CB1F"
-            strokeWidth="34"
-            strokeLinecap="round"
-          />
-        </svg>
-        <svg
-          className="animate-drift-a absolute -bottom-[28%] -left-[18%] h-[80vh] w-[80vw] opacity-40 dark:opacity-25"
-          viewBox="0 0 600 400"
-          fill="none"
-        >
-          <path
-            d="M560 100 C 460 320, 140 360, 20 260"
-            stroke="#7A8F14"
-            strokeWidth="30"
-            strokeLinecap="round"
-          />
-        </svg>
+      {/* Soft colour blobs roaming the whole canvas — TIC lime greens plus
+          a cool accent for depth. Heavily blurred so they read as a slow,
+          living gradient rather than shapes. Each blob has its own path. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="animate-roam-a absolute left-[8%] top-[12%] h-[30rem] w-[30rem] rounded-full bg-lime-500/40 blur-3xl dark:bg-lime-500/20" />
+        <div className="animate-roam-b absolute right-[6%] top-[20%] h-[32rem] w-[32rem] rounded-full bg-lime-700/30 blur-3xl dark:bg-lime-700/20" />
+        <div className="animate-roam-c absolute bottom-[6%] left-[30%] h-[28rem] w-[28rem] rounded-full bg-emerald-400/30 blur-3xl dark:bg-emerald-500/15" />
+        <div className="animate-roam-a absolute bottom-[14%] right-[24%] h-[24rem] w-[24rem] rounded-full bg-lime-300/40 blur-3xl dark:bg-teal-500/15" />
       </div>
 
       {/* Theme choice available before signing in */}
