@@ -4,6 +4,21 @@ Standalone production planning, clocking, and build-history tool for TIC's
 Engineered Services Division. Spec: `docs/esd-production-planner-spec-v0.4.md`.
 Conventions for Claude Code and humans: `CLAUDE.md`.
 
+**Just want to run it?** Double-click **Production Planner** on the desktop,
+or see [docs/run-locally.md](docs/run-locally.md). Hosting the trial on
+another machine: [docs/deployment-guide.md](docs/deployment-guide.md).
+
+### Documentation map
+
+| Doc | For |
+|---|---|
+| [docs/run-locally.md](docs/run-locally.md) | Starting the app each day from your desktop |
+| [docs/deployment-guide.md](docs/deployment-guide.md) | Hosting the trial on Liam's laptop or the office server |
+| [docs/logins.md](docs/logins.md) | Every dev/trial account and password |
+| [docs/trial-workflow.md](docs/trial-workflow.md) | How work flows through the app (living doc) |
+| [docs/trial-notes.md](docs/trial-notes.md) | Rules enforced silently, manual steps, edge cases |
+| [docs/design-spec-v1.2.md](docs/design-spec-v1.2.md) · [docs/ui-migration-plan.md](docs/ui-migration-plan.md) | UI design system and how the codebase adopts it |
+
 ## Prerequisites (one-time, per developer)
 
 1. **Docker Desktop** with the WSL2 backend (Windows). Verify: `wsl --status`
@@ -38,6 +53,10 @@ npm run dev
 App: http://localhost:3000 — Supabase Studio (DB admin): http://localhost:44323
 (local ports are 443xx, not the Supabase defaults — see supabase/config.toml)
 
+After this one-time setup, day-to-day starting is just the **Production
+Planner** desktop shortcut (`start-planner.ps1`), which brings Docker,
+Supabase, and the app up together and prints the shareable LAN URL.
+
 ## Day-to-day
 
 | Task | Command |
@@ -55,14 +74,15 @@ App: http://localhost:3000 — Supabase Studio (DB admin): http://localhost:4432
 
 Seeded by `supabase db reset` — local development only. Password for all
 accounts: `planner-dev`. Public sign-up is disabled; users are admin-managed.
+Full table in [docs/logins.md](docs/logins.md).
 
-| Email | Role |
-|---|---|
-| andrew@tic-direct.com | admin |
-| liam@tic-direct.com | admin |
-| sophie@tic-direct.com | commercial |
-| kiosk@tic-direct.com | workshop (shared shopfloor PC) |
-| richard@tic-direct.com | viewer |
+| Person | Email | Role |
+|---|---|---|
+| Andrew Turner | andrew@tic-direct.com | admin |
+| Liam Chisholm | liam@tic-direct.com | admin |
+| Sophie Clark | sophie@tic-direct.com | commercial |
+| Workshop Kiosk | kiosk@tic-direct.com | workshop (shared shopfloor PC) |
+| Richard Whalley | richard@tic-direct.com | viewer |
 
 The seed also creates six workers (competencies included) and a small
 sample dataset — one customer/project, two parts, and builds BU12001 and
@@ -87,9 +107,15 @@ fresh reset gives you something to click through immediately.
   corrections with void/restore audit, worked time net of the unpaid
   break, timestamped OT segments, per-build notes (append-only, with
   attachments) and the private document repository.
-- **Phase 4 — reporting: reports done, trial running.** All five reports
-  with Excel-safe CSV export. Trial edge cases still to exercise.
-- Phase 5 (office-server deployment, backups, scheduled jobs) not started.
+- **Phase 4 — reporting: reports done, trial-ready.** All five reports with
+  Excel-safe CSV export; branded UI pass (light/dark, TIC lime) and the
+  branded login screen; dashboard, Order Book / Build History / Team
+  naming, customer badge colours, booked-OT board chips. Trial edge cases
+  still to exercise.
+- **Phase 5 — deployment: guides written, not executed.** Desktop launcher
+  and the run-locally / deployment guides are in place; self-hosted Docker
+  with real secrets, TLS, and scheduled jobs on the office server is the
+  remaining work.
 
 **Running the trial? Read [docs/trial-notes.md](docs/trial-notes.md)** —
 the operational reference: what's enforced silently, what's still manual
@@ -109,8 +135,8 @@ scheduling.
   tablet-first for the shared workshop PC now and iPads later.
 - Hours only, never money. Overtime is classified (1.5x Mon–Sat, 2x Sun),
   rates are applied outside this system.
-- Roles: admin (Andrew, Liam), commercial (Sophie), workshop, viewer.
-  Role gating in the UI is presentational; RLS is the enforcement.
+- Roles: admin (Andrew Turner, Liam Chisholm), commercial (Sophie Clark),
+  workshop, viewer. Role gating in the UI is presentational; RLS enforces.
 - Reference data (statuses, phases) lives in tables, never in code.
 - Registers deactivate, never delete (customers, workers); half-day
   holidays are single-date rows (AM = 4.5h, PM = 3h against the
@@ -118,7 +144,10 @@ scheduling.
 
 ## Deployment
 
-None yet — development is entirely local. Production will be self-hosted
-Docker on the office server (see spec §8a); Lane Systems involvement is
-parked until the tool is ready for mass use. Nothing in this repo may
-assume Supabase Cloud.
+Not yet deployed — development and the trial both run locally. The trial can
+be hosted on Andrew's PC, Liam's laptop, or the office server via the
+desktop launcher; see [docs/deployment-guide.md](docs/deployment-guide.md).
+Full production hosting is self-hosted Docker on the office server (spec
+§8a) with real secrets and TLS — the remaining Phase 5 work. Lane Systems
+involvement is parked until the tool is ready for mass use. Nothing in this
+repo may assume Supabase Cloud.
