@@ -65,8 +65,8 @@ on conflict (provider_id, provider) do nothing;
 -- Roles per spec §4. The kiosk is the shared shopfloor PC login: workshop
 -- policies, with worker identity coming from the dropdown, not the login.
 insert into profiles (id, display_name, role) values
-  ('a0000000-0000-0000-0000-000000000001', 'Andrew',          'admin'),
-  ('a0000000-0000-0000-0000-000000000002', 'Liam',            'admin'),
+  ('a0000000-0000-0000-0000-000000000001', 'Andrew Turner',   'admin'),
+  ('a0000000-0000-0000-0000-000000000002', 'Liam Chisholm',   'admin'),
   ('a0000000-0000-0000-0000-000000000003', 'Sophie Clark',    'commercial'),
   ('a0000000-0000-0000-0000-000000000004', 'Workshop Kiosk',  'workshop'),
   ('a0000000-0000-0000-0000-000000000005', 'Richard Whalley', 'viewer')
@@ -77,8 +77,8 @@ on conflict (id) do update
 -- Andrew, Liam, and Sophie are users AND workers (spec §4); the three
 -- workshop colleagues are workers only — they clock via the kiosk.
 insert into workers (id, name, user_id) values
-  ('b0000000-0000-0000-0000-000000000001', 'Andrew',         'a0000000-0000-0000-0000-000000000001'),
-  ('b0000000-0000-0000-0000-000000000002', 'Liam',           'a0000000-0000-0000-0000-000000000002'),
+  ('b0000000-0000-0000-0000-000000000001', 'Andrew Turner',  'a0000000-0000-0000-0000-000000000001'),
+  ('b0000000-0000-0000-0000-000000000002', 'Liam Chisholm',  'a0000000-0000-0000-0000-000000000002'),
   ('b0000000-0000-0000-0000-000000000003', 'Sophie Clark',   'a0000000-0000-0000-0000-000000000003'),
   ('b0000000-0000-0000-0000-000000000004', 'Kai Truscott',   null),
   ('b0000000-0000-0000-0000-000000000005', 'Dave Atkinson',  null),
@@ -95,7 +95,7 @@ where w.id between 'b0000000-0000-0000-0000-000000000001'
                and 'b0000000-0000-0000-0000-000000000006'
   and (p.code in ('MECH','ELEC')
        or (p.code = 'INSP'
-           and w.name in ('Andrew','Liam','Sophie Clark','Kai Truscott','Lewis Cuthbert')))
+           and w.name in ('Andrew Turner','Liam Chisholm','Sophie Clark','Kai Truscott','Lewis Cuthbert')))
 on conflict do nothing;
 
 -- ── Sample dev data (LOCAL ONLY) ──────────────────────────────────

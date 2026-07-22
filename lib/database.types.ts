@@ -204,6 +204,8 @@ export type Database = {
       customers: {
         Row: {
           active: boolean
+          badge_bg: string
+          badge_text: string
           created_at: string
           id: string
           name: string
@@ -212,6 +214,8 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          badge_bg?: string
+          badge_text?: string
           created_at?: string
           id?: string
           name: string
@@ -220,6 +224,8 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          badge_bg?: string
+          badge_text?: string
           created_at?: string
           id?: string
           name?: string
