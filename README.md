@@ -77,18 +77,31 @@ fresh reset gives you something to click through immediately.
   by pgTAP tests); CRUD registers for customers, projects, parts, and
   builds with order metadata, OrderWise refs, statuses, and material
   readiness (manual flag + outstanding lines, informational only).
-- **Phase 2 — capacity and schedule: in progress.** Workers with phase
-  competencies and user links, holiday calendar (full and half days —
-  AM/PM on a single date), and phase operations on builds with estimated
-  hours. Next: the scheduling board (workers × days, drag-and-drop
-  assignments, overtime, conflict flags) and the load view.
-- Phases 3–5 (shopfloor clocking, documents/notes, reporting, server
-  deployment) not started.
+- **Phase 2 — capacity and schedule: done.** Workers with phase
+  competencies, holiday calendar (incl. AM/PM half days), operations on
+  builds, and the production board: build rows over a fortnight, multi-day
+  assignment with overtime modes and undo, conflict flags, and the load
+  view against real capacity.
+- **Phase 3 — shopfloor and documents: done.** Kiosk clocking (identity
+  from the dropdown, auto job-switch, In-Build on first clock-on), admin
+  corrections with void/restore audit, worked time net of the unpaid
+  break, timestamped OT segments, per-build notes (append-only, with
+  attachments) and the private document repository.
+- **Phase 4 — reporting: reports done, trial running.** All five reports
+  with Excel-safe CSV export. Trial edge cases still to exercise.
+- Phase 5 (office-server deployment, backups, scheduled jobs) not started.
+
+**Running the trial? Read [docs/trial-notes.md](docs/trial-notes.md)** —
+the operational reference: what's enforced silently, what's still manual
+(the auto clock-off must be run by hand), how to read the reports, and
+what the trial should deliberately exercise.
 
 Domain rules that trip people up: time entries can never be hard-deleted
 (admin delete = audited soft-delete via `voided`; query
-`active_time_entries`, not the table); material status never blocks
-scheduling; OT class is derived from timestamps, never entered.
+`active_time_entries`, not the table); worked time excludes the unpaid
+12:00–13:00 break; OT is derived from timestamps and split into
+timestamped segments, never entered; material status never blocks
+scheduling.
 
 ## Design intent (short version)
 
