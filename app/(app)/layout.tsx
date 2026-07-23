@@ -45,6 +45,12 @@ export default async function AppLayout({
           </Link>
           <MainNav isAdmin={profile.role === "admin"} />
           <div className="ml-auto flex items-center gap-3">
+            <Link
+              href="/shopfloor"
+              className="flex items-center gap-1.5 rounded-lg bg-lime-500 px-3 py-1.5 text-sm font-semibold text-neutral-800 hover:bg-lime-600"
+            >
+              <span aria-hidden>⏱</span> Clock on
+            </Link>
             <ThemeToggle />
             <span className="text-sm text-zinc-600 dark:text-zinc-400">
               {profile.display_name}

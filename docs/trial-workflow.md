@@ -43,9 +43,13 @@ Order in → Order Book → Operations & materials → Production board
 
 ## 3. On the floor (everyone who builds)
 
-1. Kiosk at `/shopfloor`, signed in as the kiosk account. Tap your name,
-   tap the job. Tapping a different job later switches automatically —
-   no need to clock off first.
+1. **Clocking on** — the shared workshop PC stays on the kiosk screen; on
+   any other machine, use the lime **⏱ Clock on** button top-right of the
+   header (both open `/shopfloor`). Tap your name, tap the job. Tapping a
+   different job later switches automatically — no need to clock off first.
+   The kiosk records *who you tapped*, not who's logged in, so the shared
+   account is fine. A **← Planner** link in the kiosk header gets an admin
+   back to the main app.
 2. Something in the way? Type a short reason and **Flag blocked** — it
    shows on the board immediately. Unblock when it's moving again.
 3. Red-pen markup or site photo → add it as a **note attachment** on the
@@ -72,6 +76,9 @@ Order in → Order Book → Operations & materials → Production board
 
 ## Refinements adopted during the trial
 
+- 23 Jul: **⏱ Clock on** button added to the app header (clocking was only
+  reachable by typing `/shopfloor`); **← Planner** link added to the kiosk
+  so admins aren't stranded there.
 - 20 Jul: Load moved above the board (collapsible) so long schedules don't
   bury capacity. Customer badges colour-coded. Booked-OT ⏱ chips added.
 - *(add each workflow change here, newest first)*

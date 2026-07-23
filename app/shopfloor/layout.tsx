@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getUserProfile } from "@/lib/auth";
 import { KioskClock } from "./kiosk-clock";
@@ -31,6 +32,14 @@ export default async function ShopfloorLayout({
             Workshop clocking
           </span>
           <KioskClock />
+          {/* Way out of the kiosk — on the shared shopfloor PC this is
+              ignored; anywhere else it's how an admin/user gets back. */}
+          <Link
+            href="/"
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            ← Planner
+          </Link>
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
